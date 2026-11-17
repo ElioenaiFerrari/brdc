@@ -149,4 +149,36 @@ defmodule BrdcLedger.ContractTemplates do
   @doc "Um modelo pelo id."
   @spec fetch(String.t()) :: {:ok, template()} | :error
   def fetch(id), do: Map.fetch(@templates, id)
+
+  @doc """
+  Os modelos em forma de dado para JSON (átomos viram texto, tuplas viram listas). A carteira lê este
+  arquivo (`apps/brdc_web/assets/js/generated/contract_templates.json`) para mostrar as ações e o que cada
+  uma faz com o dinheiro, sem repetir as regras à mão. Um teste confere que o arquivo está em dia.
+  """
+  @spec export() :: map()
+  def export do
+    for {id, t} <- @templates, into: %{} do
+      {id,
+       %{
+         "terms" => Enum.map(t.terms, &Atom.to_string/1),
+         "initial" => %{"state" => json(t.initial.state), "effects" => json(t.initial.effects)},
+         "transitions" => Map.new(t.transitions, fn {name, tr} -> {name, transition(tr)} end)
+       }}
+    end
+  end
+
+  defp transition(tr) do
+    %{
+      "from" => json(tr.from),
+      "to" => json(tr.to),
+      "actor" => json(tr.actor),
+      "guards" => json(Map.get(tr, :guards, [])),
+      "effects" => json(tr.effects)
+    }
+  end
+
+  defp json(a) when is_atom(a), do: Atom.to_string(a)
+  defp json(t) when is_tuple(t), do: t |> Tuple.to_list() |> Enum.map(&json/1)
+  defp json(l) when is_list(l), do: Enum.map(l, &json/1)
+  defp json(n) when is_integer(n), do: n
 end

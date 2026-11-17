@@ -127,6 +127,28 @@ Invariante → teste que o cobre. Linhas *planejadas* ainda não têm teste: ent
 | O painel da carteira não tem campo ligado ao LiveView, nem `name`; o servidor só aceita um endereço válido e ignora frase, senha e passphrase; CSP estrita | `brdc_web/test/brdc_web_web/live/wallet_live_test.exs` |
 | **Verificado à mão (Chrome 153):** criar com validações, IndexedDB sem texto à vista, servidor recebe só o endereço, bloquear, recarregar, senha errada, passphrase diferente, destravar | roteiro manual no Fluxo 13 |
 
+## Nó local e envio de BRDC (pronto; um validador)
+| Invariante | Teste |
+|---|---|
+| Bloco só com transação pendente (nunca vazio); saldo pendente x confirmado; nonce em sequência; duplicado, sem fundos, taxa baixa, assinatura ruim e mint repetido recusados | `brdc_node/test/brdc_node/node_test.exs` |
+| O horário do bloco nunca decresce; limite de transações por bloco; relógio automático só quando há pendente | `node_test.exs` |
+| **Pela rede em TCP:** financiar, bloco, saldo; transferência assinada pelo cliente muda os saldos e paga a taxa ao validador; recusas voltam como motivo | `brdc_dev/test/brdc_dev/devnet_e2e_test.exs` |
+| Chaves da rede de teste `0600` e idempotentes; outra pasta, outra gênese | `devnet_e2e_test.exs` |
+| A carteira (servidor) mostra o saldo real, funciona sem nó, `prepare` só devolve dados públicos em texto, `submit` aceita só tx do próprio endereço, nada de segredo | `brdc_web/test/.../wallet_node_test.exs` |
+| Valor digitado: `1.5` **nunca** vira 15; ponto só como milhar bem posicionado; até 6 casas; limite de 64 bits | `brdc_ledger/test/.../amount_test.exs`, `assets/js/crypto/send.test.mjs` |
+| **A taxa mínima do JS é a do Elixir** (vetores) e é calculável antes de assinar | `send.test.mjs`; `ledger_test.exs` |
+| **Verificado à mão (Chrome 153):** criar, financiar, saldo aparece sozinho, enviar 12,5, destino e remetente conferem no nó | roteiro manual no Fluxo 14 |
+
+## Contratos entre partes na carteira (pronto)
+| Invariante | Teste |
+|---|---|
+| Contratos criados e executados no JS têm **bytes, assinatura e id iguais** aos do Elixir | `assets/js/crypto/contracts.test.mjs` |
+| O arquivo de modelos que a carteira lê é exportado do Elixir e está em dia | `brdc_ledger/test/.../contracts_test.exs` (`modelos exportados`) |
+| A prévia do dinheiro de cada ação (compra e venda, aluguel com caução x parcelas em aberto, empréstimo) e as condições de prazo | `contracts.test.mjs` |
+| Consulta de contratos de um endereço pela rede (TCP): as duas partes veem, um terceiro não; consulta malformada recusada | `brdc_dev/test/.../devnet_e2e_test.exs` |
+| O servidor empurra ao navegador os contratos do endereço (endereços `brdc1…`, números como texto) e atualiza | `brdc_web/test/.../wallet_node_test.exs` |
+| **Verificado à mão (Chrome 153, duas carteiras):** criar, aceitar (escrow), confirmar; saldos fecham; estado "Concluído" | roteiro manual no Fluxo 15 |
+
 ## Planejado por fase
 | Fase | Invariantes (a testar) |
 |---|---|

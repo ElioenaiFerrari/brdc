@@ -21,7 +21,7 @@ Pré-requisito: [Carteira HD e passphrase](03-hd-wallet-and-passphrase.md) e [Co
 - **Inteiros grandes:** valores até 2⁶⁴−1 exigem `BigInt` ou texto.
 
 ## Rode você mesmo
-`make js-test` (18 testes). Para regerar os vetores do Elixir: `mix run tools/gen_wallet_vectors.exs`.
+`make js-test` (18 testes). Para regerar os vetores do Elixir: `mix run --no-start tools/gen_wallet_vectors.exs`.
 
 ## Limites honestos
 Veja o [Fluxo 12](../flows/12-browser-signing.md): ainda sem telas, sem cofre cifrado, só transferências nos vetores.

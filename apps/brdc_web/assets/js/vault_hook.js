@@ -5,6 +5,7 @@ import { createSession } from "./crypto/session.mjs";
 import { indexedDbStore } from "./crypto/store.mjs";
 import { passwordProblems } from "./crypto/vault.mjs";
 import { isValidMnemonic } from "./crypto/bip39.mjs";
+import { setSession } from "./wallet_state.js";
 
 const VIEWS = ["loading", "welcome", "create-words", "create-confirm", "create-secure", "import", "unlock", "unsupported"];
 
@@ -33,6 +34,7 @@ export const Vault = {
     });
 
     this.session = createSession({ store: indexedDbStore(), onLock: () => this.onLocked() });
+    setSession(this.session);
     this.bind();
     for (const ev of ["pointerdown", "keydown"]) document.addEventListener(ev, () => this.session.touch(), { passive: true });
     document.addEventListener("visibilitychange", () => document.hidden && this.session.lock());

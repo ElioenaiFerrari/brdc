@@ -21,5 +21,6 @@ Leia na ordem; cada uma se apoia na anterior.
 15. [Como ler o código da Fase 5, parte de contratos](15-reading-phase-5c-code.md): os modelos como dados e o motor.
 16. [Como ler o código da Fase 6, criptografia do navegador](16-reading-phase-6a-code.md): os módulos JS da carteira.
 17. [Como ler o código da Fase 6, cofre e telas da carteira](17-reading-phase-6b-code.md): o cofre cifrado e as telas.
+18. [Como ler o código do nó local e do envio](18-reading-phase-7a-code.md): o nó de um validador, a carteira como cliente e o envio.
 
 Termos novos estão no [GLOSSARY](../GLOSSARY.md). Ao fim de cada fase de implementação, a página correspondente ganha a seção **"Como ler o código desta fase"**.

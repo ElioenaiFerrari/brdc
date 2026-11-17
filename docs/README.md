@@ -31,6 +31,8 @@ Um fluxo por funcionalidade (texto e diagrama) em `docs/flows/`, à medida que c
 - [11 — Contratos entre partes (compra e venda, aluguel, empréstimo)](flows/11-contracts.md) (Fase 5)
 - [12 — Como a carteira assina no navegador](flows/12-browser-signing.md) (Fase 6)
 - [13 — Criar, proteger e destravar a carteira](flows/13-wallet-vault.md) (Fase 6)
+- [14 — Nó local, saldo e envio de BRDC pela carteira](flows/14-local-node-and-send.md) (Fases 6 e 7)
+- [15 — Contratos entre partes na carteira](flows/15-contracts-in-wallet.md) (Fase 6)
 
 A [arquitetura](ARCHITECTURE.md) dá a visão geral.
 

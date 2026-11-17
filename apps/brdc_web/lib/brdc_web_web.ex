@@ -83,6 +83,8 @@ defmodule BrdcWebWeb do
       import BrdcWebWeb.CoreComponents
       import BrdcWebWeb.BrdcComponents
       import BrdcWebWeb.VaultComponents
+      import BrdcWebWeb.SendComponents
+      import BrdcWebWeb.ContractsComponents
 
       # Common modules used in templates
       alias BrdcWebWeb.Layouts

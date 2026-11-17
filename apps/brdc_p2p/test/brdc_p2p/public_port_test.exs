@@ -123,6 +123,6 @@ defmodule BrdcP2p.PublicPortTest do
   end
 
   test "a lista de tipos é fixa e pequena" do
-    assert PublicPort.kinds() |> Map.keys() |> Enum.sort() == [1, 2, 3, 4]
+    assert PublicPort.kinds() |> Map.keys() |> Enum.sort() == [1, 2, 3, 4, 5]
   end
 end

@@ -15,8 +15,10 @@ defmodule BrdcLedger.Executor do
 
   @doc "Taxa mínima de uma transação, pela tabela dos parâmetros (ADR-0014)."
   @spec min_fee(Params.t(), Tx.t()) :: non_neg_integer()
+  # o tamanho é o do corpo assinado + 64 bytes de assinatura: igual a `byte_size(Tx.encode(tx))` e
+  # calculável ANTES de assinar (a carteira precisa da taxa para montar o que vai assinar)
   def min_fee(%Params{} = p, %Tx{kind: 1} = tx),
-    do: p.transfer_base + p.per_byte * byte_size(Tx.encode(tx))
+    do: p.transfer_base + p.per_byte * (byte_size(Tx.signing_bytes(tx)) + 64)
 
   def min_fee(%Params{} = p, %Tx{kind: kind}) when kind in 5..13, do: Assets.min_fee(p, kind)
 

@@ -1,7 +1,7 @@
-defmodule BrdcWebWeb.FormatTest do
+defmodule BrdcLedger.AmountTest do
   use ExUnit.Case, async: true
   use ExUnitProperties
-  alias BrdcWebWeb.Format
+  alias BrdcLedger.Amount, as: Format
 
   test "mostra 2 casas e trunca (nunca arredonda para cima)" do
     assert Format.brdc(0) == "0,00"
@@ -26,6 +26,13 @@ defmodule BrdcWebWeb.FormatTest do
 
     for bad <- ["", ",", "abc", "1,2,3", "1,1234567", "-1", "1,5x"],
         do: assert(Format.parse(bad) == :error)
+
+    # o ponto só é milhar bem posicionado: "1.5" NÃO pode virar 15 BRDC
+    assert Format.parse("1.234.567,5") == {:ok, 1_234_567_500_000}
+
+    for bad <- ["1.5", "12.34", "1.23", "1..234", ".5", "1.2345", "12.345.6"] do
+      assert Format.parse(bad) == :error, bad
+    end
 
     assert Format.parse("99999999999999999999999") == :error
   end

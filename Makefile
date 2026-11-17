@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
-.PHONY: help setup format lint dialyzer test check js-test js-vectors docs-check diagrams
+.PHONY: help setup format lint dialyzer test check js-test js-vectors docs-check diagrams run fund balance
 
 help: ## Lista os atalhos
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  \033[1m%-14s\033[0m %s\n", $$1, $$2}'
@@ -16,6 +16,15 @@ lint: ## Análise estática (credo, modo estrito)
 
 dialyzer: ## Tipos (dialyzer); a primeira vez monta o PLT e demora
 	mix dialyzer
+
+run: ## Sobe a carteira (http://localhost:4000) e o nó local de desenvolvimento (porta 4545) juntos
+	mix phx.server
+
+fund: ## BRDC de TESTE para um endereço (nó local rodando): make fund ADDR=brdc1… AMOUNT=100
+	mix brdc.fund $(ADDR) $(AMOUNT)
+
+balance: ## Saldo de um endereço no nó local: make balance ADDR=brdc1…
+	mix brdc.balance $(ADDR)
 
 test: ## Testes de todos os apps
 	mix test

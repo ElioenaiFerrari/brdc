@@ -2,7 +2,7 @@
 
 Uma **stablecoin brasileira** (1 BRDC = 1 BRL) numa blockchain própria em **Elixir**, com **contratos nativos** de propriedade, credenciais (CNH, identificação, casamento, divórcio…) e contratos entre partes, uma rede **P2P** de validadores e uma **carteira web não custodial**. Projeto de estudo: sem auditoria, sem validade jurídica, sem integração bancária real.
 
-> **Estado atual: Fase 6 em andamento (carteira de autocustódia: identidade visual escura, criptografia do navegador, cofre cifrado e telas de criar, importar e destravar; faltam saldo e envio contra um nó, bens, contratos, credenciais e assinatura coletiva), Fase 5 pronta (no ledger: bens com órgão, escrow, veto e gravames; credenciais com janela de contestação, validade, revogação, casamento e divórcio; contratos entre partes de compra e venda, aluguel e empréstimo), Fase 4 pronta (canal TLS 1.3 mútuo, limites, banimento, descoberta de pares, porta pública, `keygen` e gênese), Fase 3 com o motor de consenso pronto (BFT, simulado com falhas), Fase 2 pronta (ledger em memória: transferência, mint e burn por M-de-N, atestado de reserva, taxas, blocos atômicos).** A Fase 1 também. `brdc_crypto` tem hash etiquetado, Ed25519, BIP-39 com passphrase, SLIP-10, endereços `brdc1…` e codificação determinística, com vetores oficiais conferidos também em JavaScript. **Ainda não há rede P2P, nó rodando nem carteira web**: a moeda e o consenso existem como bibliotecas testadas em memória e por simulação, e o resto chega nas fases seguintes ([roteiro](docs/PHASES.md)).
+> **Estado atual: Fase 6 em andamento (carteira de autocustódia: identidade visual escura, criptografia do navegador, cofre cifrado, telas de criar, importar e destravar, **saldo e envio de BRDC** contra um nó local de um validador; **contratos entre partes** (criar, aceitar e operar, com prévia do dinheiro); faltam bens, credenciais, assinatura coletiva e o nó com vários validadores), Fase 5 pronta (no ledger: bens com órgão, escrow, veto e gravames; credenciais com janela de contestação, validade, revogação, casamento e divórcio; contratos entre partes de compra e venda, aluguel e empréstimo), Fase 4 pronta (canal TLS 1.3 mútuo, limites, banimento, descoberta de pares, porta pública, `keygen` e gênese), Fase 3 com o motor de consenso pronto (BFT, simulado com falhas), Fase 2 pronta (ledger em memória: transferência, mint e burn por M-de-N, atestado de reserva, taxas, blocos atômicos).** A Fase 1 também. `brdc_crypto` tem hash etiquetado, Ed25519, BIP-39 com passphrase, SLIP-10, endereços `brdc1…` e codificação determinística, com vetores oficiais conferidos também em JavaScript. **Ainda não há rede P2P, nó rodando nem carteira web**: a moeda e o consenso existem como bibliotecas testadas em memória e por simulação, e o resto chega nas fases seguintes ([roteiro](docs/PHASES.md)).
 
 ![Arquitetura da BRDC: a carteira web assina no navegador e envia a transação ao nó, que a coloca no mempool do consenso BFT; o ledger aplica o bloco decidido e os validadores conversam por sessões Noise](docs/diagrams/architecture-overview.png)
 
@@ -23,8 +23,9 @@ Uma **stablecoin brasileira** (1 BRDC = 1 BRL) numa blockchain própria em **Eli
 | `brdc_ledger` (moeda pronta) | contas, transações, blocos, estado e módulos nativos (moeda, bens, credenciais, contratos) | 2 e 5 |
 | `brdc_consensus` | motor BFT sem I/O: rodadas, votos, certificado de commit | 3 |
 | `brdc_p2p` | canal TLS 1.3 mútuo, portas de pares e pública, limites, descoberta | 4 |
-| `brdc_node` | nó completo (OTP): supervisão, mempool, armazenamento, RPC | 7 |
-| `brdc_web` | carteira LiveView (criptografia em JS no navegador) e explorador | 6 (ainda não criado) |
+| `brdc_node` | nó (OTP): hoje um validador local com mempool, blocos, porta pública e cliente; depois, vários validadores e disco | 7 |
+| `brdc_dev` | **só desenvolvimento:** nó local de teste e as tarefas `mix brdc.fund` e `mix brdc.balance` | 7 |
+| `brdc_web` | carteira LiveView (criptografia em JS no navegador; **pronta**: criar, importar, destravar, saldo e envio) e, depois, explorador | 6 |
 
 ## Início rápido
 
@@ -34,6 +35,8 @@ make check        # formato, credo e testes
 make docs-check   # confere a documentação
 make              # lista tudo
 ```
+
+Para ver a carteira funcionando (nó local de teste incluído): `make run` e abra `http://localhost:4000`; para financiar um endereço de teste: `make fund ADDR=brdc1… AMOUNT=100`.
 
 Para criar uma rede de teste local (as chaves ficam em `net/`, ignorada pelo git; detalhes no [Fluxo 07](docs/flows/07-keygen-and-genesis.md)):
 

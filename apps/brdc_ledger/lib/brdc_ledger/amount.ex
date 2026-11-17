@@ -1,6 +1,6 @@
-defmodule BrdcWebWeb.Format do
+defmodule BrdcLedger.Amount do
   @moduledoc """
-  Formatação de valores da BRDC para a tela (pt-BR). 1 BRDC = 1.000.000 unidades mínimas (ADR-0010).
+  Valores da BRDC: texto pt-BR para a tela e leitura do que a pessoa digita. 1 BRDC = 1.000.000 unidades mínimas (ADR-0010).
 
   A tela mostra 2 casas decimais e **trunca** (nunca arredonda para cima: não mostramos mais do que
   a pessoa tem). Os 6 casas completas aparecem nos detalhes (`full/1`).
@@ -33,20 +33,30 @@ defmodule BrdcWebWeb.Format do
     thousands(div(units, @unit)) <> "," <> frac
   end
 
-  @doc "Texto digitado (`\"12,5\"`) para unidades mínimas; `:error` se inválido ou com mais de 6 casas."
+  @doc """
+  Texto digitado (`"12,5"`) para unidades mínimas; `:error` se inválido ou com mais de 6 casas.
+
+  O ponto só vale como **separador de milhar** bem posicionado (`"1.234,56"`). Um ponto fora de lugar
+  (`"1.5"`, que alguém acostumado ao inglês leria como um e meio) é **recusado**, em vez de virar 15 BRDC.
+  """
   @spec parse(String.t()) :: {:ok, non_neg_integer()} | :error
   def parse(text) when is_binary(text) do
-    case text |> String.trim() |> String.replace(".", "") |> String.split(",") do
+    case text |> String.trim() |> String.split(",") do
       [whole] -> to_units(whole, "")
       [whole, frac] -> to_units(whole, frac)
       _ -> :error
     end
   end
 
+  # `whole`: dígitos, ou grupos de 3 separados por ponto (milhar) depois de 1 a 3 dígitos
+  @whole ~r/\A(\d+|\d{1,3}(\.\d{3})+)\z/
+
   defp to_units(whole, frac) do
-    with true <- whole =~ ~r/\A\d+\z/ and (frac == "" or frac =~ ~r/\A\d{1,6}\z/),
+    with true <- whole =~ @whole and (frac == "" or frac =~ ~r/\A\d{1,6}\z/),
+         digits = String.replace(whole, ".", ""),
          units =
-           String.to_integer(whole) * @unit + String.to_integer(String.pad_trailing(frac, 6, "0")),
+           String.to_integer(digits) * @unit +
+             String.to_integer(String.pad_trailing(frac, 6, "0")),
          true <- units <= 0xFFFFFFFFFFFFFFFF do
       {:ok, units}
     else

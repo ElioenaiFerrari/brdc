@@ -14,7 +14,7 @@
 
 ## Passo a passo
 1. O cliente abre TCP. O `Guard` admite o IP (teto por IP e total; ban).
-2. Cada pedido é um quadro `tamanho ‖ tipo(1 byte) ‖ corpo`. Os tipos aceitos são só **1 status, 2 enviar transação, 3 ler bloco, 4 ler conta**.
+2. Cada pedido é um quadro `tamanho ‖ tipo(1 byte) ‖ corpo`. Os tipos aceitos são só **1 status, 2 enviar transação, 3 ler bloco, 4 ler conta, 5 consulta** (o primeiro byte do corpo diz qual: hoje, `1` = contratos de um endereço).
 3. O tamanho do corpo é limitado **por tipo** (16 B, 64 KiB, 16 B, 64 B) e o quadro inteiro por um teto global; a taxa é limitada por conexão (balde de fichas).
 4. O `handler` do nó responde `{:ok, corpo}` ou `{:error, motivo}`. Se ele **falhar**, o cliente recebe o erro genérico `internal` e a conexão continua.
 5. Resposta: `<<0, corpo>>` (ok) ou `<<1, motivo>>` (erro).

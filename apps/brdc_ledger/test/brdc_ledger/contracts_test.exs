@@ -298,6 +298,23 @@ defmodule BrdcLedger.ContractsTest do
     end
   end
 
+  describe "modelos exportados para a carteira" do
+    @path Path.expand("../../../brdc_web/assets/js/generated/contract_templates.json", __DIR__)
+
+    test "o arquivo que a carteira lê está em dia (regere com mix run --no-start tools/gen_wallet_vectors.exs)" do
+      assert File.read!(@path) |> JSON.decode!() ==
+               ContractTemplates.export() |> JSON.encode!() |> JSON.decode!()
+    end
+
+    test "tem os três modelos, com termos, estados e efeitos" do
+      e = ContractTemplates.export()
+      assert Map.keys(e) |> Enum.sort() == ["aluguel", "compra-venda", "emprestimo"]
+      assert e["aluguel"]["terms"] == ["rent", "period", "periods", "deposit", "grace"]
+      assert e["emprestimo"]["initial"]["effects"] == [["lock", "a", ["term", "principal"]]]
+      assert e["compra-venda"]["transitions"]["accept"]["actor"] == "b"
+    end
+  end
+
   describe "propriedade" do
     defp op_gen do
       one_of([

@@ -6,7 +6,7 @@ defmodule BrdcWebWeb.BrdcComponents do
   """
   use Phoenix.Component
   import BrdcWebWeb.CoreComponents, only: [icon: 1]
-  alias BrdcWebWeb.Format
+  alias BrdcLedger.Amount
 
   @doc """
   Valor em BRDC com os centavos apagados, como na referência (`12.480,`**57**`).
@@ -19,7 +19,7 @@ defmodule BrdcWebWeb.BrdcComponents do
   attr :unit, :string, default: nil, doc: "sufixo, ex.: BRDC"
 
   def amount(assigns) do
-    {whole, cents} = Format.split(assigns.units)
+    {whole, cents} = Amount.split(assigns.units)
     assigns = assign(assigns, whole: whole, cents: cents)
 
     ~H"""

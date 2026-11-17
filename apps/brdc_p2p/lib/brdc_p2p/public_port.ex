@@ -4,7 +4,7 @@ defmodule BrdcP2p.PublicPort do
   contrário da porta de pares, **não exige identidade** (qualquer um pode perguntar) e por isso
   é **enxuta e muito limitada**:
 
-  - só 4 tipos de pedido (lista fixa): `1` status, `2` enviar transação, `3` ler bloco, `4` ler conta;
+  - só 5 tipos de pedido (lista fixa): `1` status, `2` enviar transação, `3` ler bloco, `4` ler conta, `5` consulta (subtipo no primeiro byte do corpo);
   - tamanho máximo **por tipo** de pedido; excesso bane (`:oversized_frame`);
   - tipo desconhecido ou pedido malformado soma pontos e **derruba** a conexão;
   - teto de conexões por IP e total (`BrdcP2p.Guard`), taxa por conexão (`BrdcP2p.Rate`), prazo
@@ -22,7 +22,8 @@ defmodule BrdcP2p.PublicPort do
     1 => {:status, 16},
     2 => {:submit_tx, 65_536},
     3 => {:get_block, 16},
-    4 => {:get_account, 64}
+    4 => {:get_account, 64},
+    5 => {:query, 64}
   }
   # maior pedido possível = tipo (1 byte) + maior corpo
   @max_request 1 + 65_536

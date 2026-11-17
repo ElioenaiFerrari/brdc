@@ -146,9 +146,11 @@ defmodule BrdcLedger.LedgerTest do
       assert {:error, :bad_amount} = Executor.apply_tx(s, transfer(1, 2, 0, 0))
     end
 
-    test "taxa mínima segue a tabela do ADR-0014", %{s: s} do
+    test "taxa mínima segue a tabela do ADR-0014, com ou sem assinatura", %{s: s} do
       t = transfer(1, 2, 1, 0)
       assert Executor.min_fee(s.params, t) == 1_000 + byte_size(Tx.encode(t))
+      # calculável antes de assinar (é o que a carteira faz)
+      assert Executor.min_fee(s.params, %{t | signature: nil}) == Executor.min_fee(s.params, t)
     end
   end
 
