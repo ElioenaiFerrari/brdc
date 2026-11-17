@@ -13,7 +13,19 @@ defmodule BrdcNode.Client do
   @spec status(endpoint()) :: {:ok, map()} | {:error, term()}
   def status({host, port}) do
     with {:ok, bin} <- PublicPort.request(host, port, :status, <<>>),
-         {:ok, [chain, height, time, supply, last, pending, base, per_byte, contract_fee]} <-
+         {:ok,
+          [
+            chain,
+            height,
+            time,
+            supply,
+            last,
+            pending,
+            base,
+            per_byte,
+            contract_fee,
+            credential_fee
+          ]} <-
            Encoding.decode(Handler.status_schema(), bin) do
       {:ok,
        %{
@@ -25,7 +37,8 @@ defmodule BrdcNode.Client do
          pending: pending,
          transfer_base: base,
          per_byte: per_byte,
-         contract_fee: contract_fee
+         contract_fee: contract_fee,
+         credential_fee: credential_fee
        }}
     else
       {:error, _} = err -> err
@@ -100,6 +113,132 @@ defmodule BrdcNode.Client do
         _ -> {:halt, :error}
       end
     end)
+  end
+
+  @doc "Credenciais cujo titular é o endereço."
+  @spec credentials_of(endpoint(), <<_::256>>) :: {:ok, [map()]} | {:error, term()}
+  def credentials_of({host, port}, <<_::256>> = addr) do
+    list_query(host, port, :query, <<2, addr::binary>>, Handler.cred_schema(), fn [
+                                                                                    id,
+                                                                                    type,
+                                                                                    subject,
+                                                                                    data,
+                                                                                    ref,
+                                                                                    status,
+                                                                                    issued,
+                                                                                    active,
+                                                                                    expires
+                                                                                  ] ->
+      %{
+        id: id,
+        type: type,
+        subject: subject,
+        data: data,
+        ref: ref,
+        status: status,
+        issued_at: issued,
+        active_at: active,
+        expires_at: expires
+      }
+    end)
+  end
+
+  @doc "Tipos de credencial cujo órgão inclui a chave pública (quem pode assinar emissões)."
+  @spec types_for(endpoint(), <<_::256>>) :: {:ok, [map()]} | {:error, term()}
+  def types_for({host, port}, <<_::256>> = pub) do
+    list_query(host, port, :query, <<3, pub::binary>>, Handler.type_schema(), fn [
+                                                                                   id,
+                                                                                   threshold,
+                                                                                   size,
+                                                                                   privacy,
+                                                                                   contest,
+                                                                                   validity,
+                                                                                   ref_type
+                                                                                 ] ->
+      %{
+        id: id,
+        threshold: threshold,
+        organ_size: size,
+        privacy: if(privacy == 1, do: "private", else: "public"),
+        contest_window: contest,
+        validity: validity,
+        ref_type: ref_type
+      }
+    end)
+  end
+
+  @doc "Propõe uma emissão de credencial (campos); devolve o id da proposta."
+  @spec propose(endpoint(), map()) :: {:ok, <<_::256>>} | {:error, term()}
+  def propose({host, port}, %{type: t, id: id, subject: s, data: d, ref: r}) do
+    body = <<1>> <> Encoding.encode(Handler.fields_schema(), [t, id, s, d, r])
+
+    case PublicPort.request(host, port, :proposal, body) do
+      {:ok, <<_::256>> = pid} -> {:ok, pid}
+      {:ok, _} -> {:error, :bad_response}
+      {:error, reason} when is_binary(reason) -> {:error, String.to_atom(reason)}
+      {:error, _} = err -> err
+    end
+  end
+
+  @doc "Envia a aprovação (`chave ‖ assinatura`) de um membro. Devolve quantas aprovações a proposta tem."
+  @spec approve(endpoint(), <<_::256>>, binary()) :: {:ok, non_neg_integer()} | {:error, term()}
+  def approve({host, port}, <<_::256>> = id, <<_::768>> = approval) do
+    case PublicPort.request(host, port, :proposal, <<2, id::binary, approval::binary>>) do
+      {:ok, <<n::32>>} -> {:ok, n}
+      {:ok, _} -> {:error, :bad_response}
+      {:error, reason} when is_binary(reason) -> {:error, String.to_atom(reason)}
+      {:error, _} = err -> err
+    end
+  end
+
+  @doc "Propostas abertas dos órgãos de que a chave faz parte."
+  @spec proposals_for(endpoint(), <<_::256>>) :: {:ok, [map()]} | {:error, term()}
+  def proposals_for({host, port}, <<_::256>> = pub) do
+    list_query(host, port, :proposal, <<3, pub::binary>>, Handler.proposal_schema(), fn [
+                                                                                          id,
+                                                                                          type,
+                                                                                          cred_id,
+                                                                                          subject,
+                                                                                          data,
+                                                                                          ref,
+                                                                                          approvals,
+                                                                                          threshold
+                                                                                        ] ->
+      %{
+        id: id,
+        type: type,
+        cred_id: cred_id,
+        subject: subject,
+        data: data,
+        ref: ref,
+        approvals: approvals,
+        threshold: threshold
+      }
+    end)
+  end
+
+  defp list_query(host, port, kind, body, schema, build) do
+    with {:ok, bin} <- PublicPort.request(host, port, kind, body),
+         {:ok, [entries]} <- Encoding.decode([{:list, :bytes}], bin) do
+      decode_entries(entries, schema, build)
+    else
+      {:error, _} = err -> err
+      _ -> {:error, :bad_response}
+    end
+  end
+
+  defp decode_entries(entries, schema, build) do
+    entries
+    |> Enum.reduce_while({:ok, []}, fn e, {:ok, acc} ->
+      case Encoding.decode(schema, e) do
+        {:ok, fields} -> {:cont, {:ok, [build.(fields) | acc]}}
+        _ -> {:halt, {:error, :bad_response}}
+      end
+    end)
+    |> case do
+      {:ok, acc} -> {:ok, Enum.reverse(acc)}
+      err -> err
+    end
   end
 
   @spec submit_tx(endpoint(), binary()) :: {:ok, <<_::256>>} | {:error, term()}

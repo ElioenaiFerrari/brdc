@@ -182,11 +182,7 @@ defmodule BrdcLedger.Credentials do
   def run(s, _sender, 15, payload) do
     with {:ok, [type_id, id, subject, data, ref, approvals]} <-
            decode(payload, [:string, :string, {:fixed, 32}, :bytes, :string, @list_approvals]),
-         {:ok, type} <- fetch(s.cred_types, type_id, :no_type),
-         :ok <- check(id_ok?(id, 64), :bad_id),
-         :ok <- check(not Map.has_key?(s.credentials, id), :credential_exists),
-         :ok <- check(data_ok?(type, data), :bad_data),
-         :ok <- check_ref(s, type, ref, subject),
+         {:ok, type} <- check_issue(s, type_id, id, subject, data, ref),
          d = issue_doc(s.params.chain_id, type_id, id, subject, data, ref),
          :ok <- organ_approved(type, d, approvals) do
       cred = %{
@@ -243,6 +239,22 @@ defmodule BrdcLedger.Credentials do
          d = revoke_doc(s.params.chain_id, id, reason),
          :ok <- organ_approved(s.cred_types[cred.type], d, approvals) do
       {:ok, put_status(s, id, :revoked)}
+    end
+  end
+
+  @doc """
+  Confere os campos de uma emissão (tipo existente, id livre, dados no formato do tipo, referência válida),
+  **sem** as aprovações. Usado na execução e pelo nó para aceitar propostas. Devolve o tipo.
+  """
+  @spec check_issue(State.t(), String.t(), String.t(), binary(), binary(), String.t()) ::
+          {:ok, map()} | {:error, atom()}
+  def check_issue(s, type_id, id, subject, data, ref) do
+    with {:ok, type} <- fetch(s.cred_types, type_id, :no_type),
+         :ok <- check(id_ok?(id, 64), :bad_id),
+         :ok <- check(not Map.has_key?(s.credentials, id), :credential_exists),
+         :ok <- check(data_ok?(type, data), :bad_data),
+         :ok <- check_ref(s, type, ref, subject) do
+      {:ok, type}
     end
   end
 

@@ -27,12 +27,13 @@ import topbar from "../vendor/topbar"
 import {Vault} from "./vault_hook"
 import {Send} from "./send_hook"
 import {Contracts} from "./contracts_hook"
+import {Credentials, Organ} from "./registry_hook"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, Vault, Send, Contracts},
+  hooks: {...colocatedHooks, Vault, Send, Contracts, Credentials, Organ},
 })
 
 // Show progress bar on live navigation and form submits

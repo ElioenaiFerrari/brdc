@@ -6,6 +6,7 @@ import { indexedDbStore } from "./crypto/store.mjs";
 import { passwordProblems } from "./crypto/vault.mjs";
 import { isValidMnemonic } from "./crypto/bip39.mjs";
 import { setSession } from "./wallet_state.js";
+import { hex } from "./crypto/bytes.mjs";
 
 const VIEWS = ["loading", "welcome", "create-words", "create-confirm", "create-secure", "import", "unlock", "unsupported"];
 
@@ -86,10 +87,11 @@ export const Vault = {
   },
 
   announce() {
-    const address = this.session.account().address;
+    const account = this.session.account();
     this.wipe();
     this.hidePanel();
-    this.pushEvent("wallet:unlocked", { address });
+    // endereço e chave pública são dados PÚBLICOS; a chave pública deixa o servidor mostrar os órgãos de que você faz parte
+    this.pushEvent("wallet:unlocked", { address: account.address, public_key: hex(account.publicKey) });
   },
 
   onLocked() {

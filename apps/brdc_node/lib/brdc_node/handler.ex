@@ -6,13 +6,14 @@ defmodule BrdcNode.Handler do
   - `:status` → `[chain_id, altura, horário, oferta, hash do último bloco, pendentes, taxa-base, taxa por byte]`
   - `:get_account` (corpo: 32 bytes do endereço) → `[saldo, nonce, saldo com pendentes, nonce com pendentes]`
   - `:submit_tx` (corpo: transação assinada) → id de 32 bytes, ou o motivo da recusa
-  - `:query` (corpo `<<1, endereço>>`) → contratos desse endereço
+  - `:query` (`<<1, endereço>>` contratos · `<<2, endereço>>` credenciais do titular · `<<3, chave pública>>` tipos cujo órgão inclui a chave)
+  - `:proposal` (`<<1, campos>>` propõe emissão · `<<2, id, aprovação>>` aprova · `<<3, chave pública>>` lista as dos seus órgãos)
   - `:get_block` → ainda não suportado (o bloco não tem codificação de rede)
   """
   alias BrdcCrypto.Encoding
   alias BrdcNode.Node
 
-  @status [:string, :u64, :u64, :u64, :bytes, :u32, :u64, :u64, :u64]
+  @status [:string, :u64, :u64, :u64, :bytes, :u32, :u64, :u64, :u64, :u64]
   @contract [
     :string,
     :string,
@@ -24,6 +25,11 @@ defmodule BrdcNode.Handler do
     {:list, :bytes}
   ]
   @kv [:string, :u64]
+  @cred [:string, :string, {:fixed, 32}, :bytes, :string, :string, :u64, :u64, :u64]
+  @type_entry [:string, :u32, :u32, :u8, :u64, :u64, :string]
+  @proposal [:bytes, :string, :string, {:fixed, 32}, :bytes, :string, {:list, :bytes}, :u32]
+  @fields [:string, :string, {:fixed, 32}, :bytes, :string]
+  @max_listed 100
   @max_contracts 100
   @account [:u64, :u64, :u64, :u64]
 
@@ -46,7 +52,8 @@ defmodule BrdcNode.Handler do
        s.pending,
        s.transfer_base,
        s.per_byte,
-       s.contract_fee
+       s.contract_fee,
+       s.credential_fee
      ])}
   end
 
@@ -76,7 +83,95 @@ defmodule BrdcNode.Handler do
     {:ok, Encoding.encode([{:list, :bytes}], [entries])}
   end
 
+  def handle(node, :query, <<2, addr::binary-size(32)>>) do
+    entries =
+      node
+      |> Node.credentials_of(addr)
+      |> Enum.take(@max_listed)
+      |> Enum.map(fn c ->
+        Encoding.encode(@cred, [
+          c.id,
+          c.type,
+          c.subject,
+          c.data,
+          c.ref,
+          Atom.to_string(c.status),
+          c.issued_at,
+          c.active_at,
+          c.expires_at
+        ])
+      end)
+
+    {:ok, Encoding.encode([{:list, :bytes}], [entries])}
+  end
+
+  def handle(node, :query, <<3, pub::binary-size(32)>>) do
+    entries =
+      node
+      |> Node.types_for(pub)
+      |> Enum.take(@max_listed)
+      |> Enum.map(fn t ->
+        privacy = if t.privacy == :private, do: 1, else: 0
+
+        Encoding.encode(@type_entry, [
+          t.id,
+          t.threshold,
+          length(t.organ),
+          privacy,
+          t.contest_window,
+          t.validity,
+          t.ref_type
+        ])
+      end)
+
+    {:ok, Encoding.encode([{:list, :bytes}], [entries])}
+  end
+
   def handle(_node, :query, _), do: {:error, :bad_query}
+
+  # proposta de assinatura coletiva: `<<1, campos>>` propõe, `<<2, id, aprovação>>` aprova, `<<3, chave>>` lista
+  def handle(node, :proposal, <<1, rest::binary>>) do
+    with {:ok, [type, id, subject, data, ref]} <- Encoding.decode(@fields, rest),
+         {:ok, pid} <-
+           Node.propose(node, %{type: type, id: id, subject: subject, data: data, ref: ref}) do
+      {:ok, pid}
+    else
+      {:error, reason} when is_atom(reason) -> {:error, reason}
+      _ -> {:error, :malformed}
+    end
+  end
+
+  def handle(node, :proposal, <<2, id::binary-size(32), approval::binary-size(96)>>) do
+    case Node.approve(node, id, approval) do
+      {:ok, n} -> {:ok, <<n::32>>}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  def handle(node, :proposal, <<3, pub::binary-size(32)>>) do
+    entries =
+      node
+      |> Node.proposals_for(pub)
+      |> Enum.take(@max_listed)
+      |> Enum.map(fn p ->
+        f = p.fields
+
+        Encoding.encode(@proposal, [
+          p.id,
+          f.type,
+          f.id,
+          f.subject,
+          f.data,
+          f.ref,
+          p.approvals,
+          p.threshold
+        ])
+      end)
+
+    {:ok, Encoding.encode([{:list, :bytes}], [entries])}
+  end
+
+  def handle(_node, :proposal, _), do: {:error, :bad_proposal}
 
   def handle(node, :submit_tx, body) do
     case Node.submit(node, body) do
@@ -103,6 +198,14 @@ defmodule BrdcNode.Handler do
   defp kv(map),
     do: for({k, v} <- Enum.sort(map), do: Encoding.encode(@kv, [Atom.to_string(k), v]))
 
+  @doc false
+  def cred_schema, do: @cred
+  @doc false
+  def type_schema, do: @type_entry
+  @doc false
+  def proposal_schema, do: @proposal
+  @doc false
+  def fields_schema, do: @fields
   @doc false
   def contract_schema, do: @contract
   @doc false

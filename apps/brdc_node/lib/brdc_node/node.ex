@@ -15,7 +15,7 @@ defmodule BrdcNode.Node do
   use GenServer
   alias BrdcCrypto.{Address, Ed25519}
   alias BrdcLedger.{Block, Executor, State, Tx}
-  alias BrdcNode.Genesis
+  alias BrdcNode.{Genesis, Proposals}
 
   @max_mempool 10_000
 
@@ -47,6 +47,27 @@ defmodule BrdcNode.Node do
   """
   @spec contracts_of(GenServer.server(), <<_::256>>) :: [map()]
   def contracts_of(node, addr), do: GenServer.call(node, {:contracts_of, addr})
+
+  @doc "Credenciais cujo titular é o endereço (estado confirmado)."
+  @spec credentials_of(GenServer.server(), <<_::256>>) :: [map()]
+  def credentials_of(node, addr), do: GenServer.call(node, {:credentials_of, addr})
+
+  @doc "Tipos de credencial cujo órgão inclui a chave pública `pub` (quem pode assinar emissões)."
+  @spec types_for(GenServer.server(), <<_::256>>) :: [map()]
+  def types_for(node, pub), do: GenServer.call(node, {:types_for, pub})
+
+  @doc "Propõe uma emissão de credencial para assinatura coletiva (os campos; o documento é recalculado)."
+  @spec propose(GenServer.server(), Proposals.fields()) :: {:ok, <<_::256>>} | {:error, atom()}
+  def propose(node, fields), do: GenServer.call(node, {:propose, fields})
+
+  @doc "Aprovação de um membro (`chave ‖ assinatura`) a uma proposta. Devolve quantas aprovações há."
+  @spec approve(GenServer.server(), <<_::256>>, binary()) ::
+          {:ok, non_neg_integer()} | {:error, atom()}
+  def approve(node, id, approval), do: GenServer.call(node, {:approve, id, approval})
+
+  @doc "Propostas abertas dos órgãos de que a chave faz parte, com as aprovações e o limite."
+  @spec proposals_for(GenServer.server(), <<_::256>>) :: [map()]
+  def proposals_for(node, pub), do: GenServer.call(node, {:proposals_for, pub})
 
   @doc "Recebe uma transação já assinada (bytes). Devolve o id ou o motivo da recusa."
   @spec submit(GenServer.server(), binary()) :: {:ok, <<_::256>>} | {:error, atom()}
@@ -81,6 +102,7 @@ defmodule BrdcNode.Node do
        pending_state: state,
        mempool: [],
        blocks: %{},
+       proposals: Proposals.new(),
        interval: Keyword.get(opts, :block_interval_ms, 1_000),
        clock: Keyword.get(opts, :clock, fn -> System.os_time(:second) end),
        timer: nil,
@@ -103,6 +125,7 @@ defmodule BrdcNode.Node do
        transfer_base: st.params.transfer_base,
        per_byte: st.params.per_byte,
        contract_fee: st.params.contract_fee,
+       credential_fee: st.params.credential_fee,
        genesis_hash: Genesis.hash(s.genesis)
      }, s}
   end
@@ -121,11 +144,40 @@ defmodule BrdcNode.Node do
     {:reply, list, s}
   end
 
+  def handle_call({:credentials_of, addr}, _from, s) do
+    {:reply,
+     for({id, c} <- Enum.sort(s.state.credentials), c.subject == addr, do: Map.put(c, :id, id)),
+     s}
+  end
+
+  def handle_call({:types_for, pub}, _from, s) do
+    {:reply,
+     for({id, t} <- Enum.sort(s.state.cred_types), pub in t.organ, do: Map.put(t, :id, id)), s}
+  end
+
+  def handle_call({:propose, fields}, _from, s) do
+    case Proposals.put(s.proposals, s.state, fields) do
+      {:ok, store, id} -> {:reply, {:ok, id}, %{s | proposals: store}}
+      {:error, _} = err -> {:reply, err, s}
+    end
+  end
+
+  def handle_call({:approve, id, approval}, _from, s) do
+    case Proposals.approve(s.proposals, s.state, id, approval) do
+      {:ok, store, n} -> {:reply, {:ok, n}, %{s | proposals: store}}
+      {:error, _} = err -> {:reply, err, s}
+    end
+  end
+
+  def handle_call({:proposals_for, pub}, _from, s) do
+    {:reply, Proposals.list_for(s.proposals, s.state, pub), s}
+  end
+
   def handle_call({:submit, bin}, _from, s) do
     with {:ok, tx} <- Tx.decode(bin),
          :ok <- check(length(s.mempool) < @max_mempool, :mempool_full),
          :ok <- check(not Enum.any?(s.mempool, &(Tx.id(&1) == Tx.id(tx))), :duplicate),
-         {:ok, pending, _fee} <- Executor.apply_tx(s.pending_state, tx) do
+         {:ok, pending, _fee} <- Executor.apply_tx(at_next_block(s), tx) do
       s = %{s | mempool: s.mempool ++ [tx], pending_state: pending}
       {:reply, {:ok, Tx.id(tx)}, arm(s)}
     else
@@ -169,8 +221,13 @@ defmodule BrdcNode.Node do
   # só arma o relógio se há o que produzir e ainda não há relógio armado
   defp arm(%{interval: :manual} = s), do: s
   defp arm(%{mempool: []} = s), do: s
+
   defp arm(%{timer: t} = s) when t != nil, do: s
   defp arm(s), do: %{s | timer: Process.send_after(self(), :produce, s.interval)}
+
+  # sem blocos vazios, o horário do último bloco fica parado; o próximo bloco usa o relógio (nunca menos que o último).
+  # A transação é conferida nesse horário (senão uma janela já vencida pareceria aberta).
+  defp at_next_block(s), do: %{s.pending_state | time: max(s.clock.(), s.state.time)}
 
   defp produce_block(%{mempool: []} = s), do: {:nothing, s}
 
@@ -181,6 +238,7 @@ defmodule BrdcNode.Node do
     case Block.build(s.state, s.proposer, [s.proposer], txs, time) do
       {:ok, block, new_state} ->
         s = %{s | state: new_state, mempool: rest, blocks: keep(s.blocks, block)}
+        s = %{s | proposals: Proposals.prune(s.proposals, new_state)}
         s = %{s | pending_state: replay(new_state, rest)}
         notify(s, block)
         {:ok, s, block.height}

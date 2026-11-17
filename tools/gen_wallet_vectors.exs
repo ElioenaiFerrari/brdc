@@ -102,9 +102,41 @@ contract_txs =
     }
   end
 
+# --- assinatura coletiva: documento de emissão de credencial, aprovações de dois membros e a carga final ---
+{:ok, m1} = Account.from_mnemonic(mnemonic, "m1")
+{:ok, m2} = Account.from_mnemonic(mnemonic, "m2")
+{:ok, holder_hash} = Address.decode(b.address)
+
+issue_inputs = [
+  %{type: "cnh", id: "cnh-1", data_hex: hex.("categoria=B"), ref: ""},
+  %{type: "casamento", id: "cas-a", data_hex: hex.(:crypto.hash(:sha256, "a+b")), ref: ""},
+  %{type: "divorcio", id: "div-a", data_hex: hex.(:crypto.hash(:sha256, "a-b")), ref: "cas-a"}
+]
+
+issues =
+  for i <- issue_inputs do
+    data = Base.decode16!(i.data_hex, case: :lower)
+    doc = BrdcLedger.Credentials.issue_doc("brdc-vectors", i.type, i.id, holder_hash, data, i.ref)
+    approvals = for m <- [m1, m2], do: BrdcLedger.Approvals.approval(doc, m.seed)
+
+    Map.merge(i, %{
+      subject: b.address,
+      doc: hex.(doc),
+      member_public_keys: [hex.(m1.public_key), hex.(m2.public_key)],
+      approvals: Enum.map(approvals, hex),
+      payload: hex.(BrdcLedger.Credentials.issue_payload(i.type, i.id, holder_hash, data, i.ref, approvals))
+    })
+  end
+
 File.write!(
   "vectors/tx.json",
-  JSON.encode!(%{mnemonic: mnemonic, txs: txs, contract_txs: contract_txs, chain_id: "brdc-vectors"})
+  JSON.encode!(%{
+    mnemonic: mnemonic,
+    txs: txs,
+    contract_txs: contract_txs,
+    issues: issues,
+    chain_id: "brdc-vectors"
+  })
 )
 
 File.mkdir_p!("apps/brdc_web/assets/js/generated")

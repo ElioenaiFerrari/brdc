@@ -25,15 +25,23 @@ defmodule BrdcWebWeb.WalletLive do
        offline: false,
        awaiting: false,
        contracts_sent: nil,
+       public_key: nil,
+       registry_sent: nil,
        page_title: "Carteira"
      )}
   end
 
   @impl true
-  def handle_event("wallet:unlocked", %{"address" => address}, socket) when is_binary(address) do
+  def handle_event("wallet:unlocked", %{"address" => address} = params, socket)
+      when is_binary(address) do
     case Address.decode(address) do
       {:ok, _hash} ->
-        socket = assign(socket, address: address)
+        socket =
+          assign(socket,
+            address: address,
+            public_key: public_key_for(address, params["public_key"])
+          )
+
         send(self(), :refresh)
         {:noreply, socket}
 
@@ -49,7 +57,9 @@ defmodule BrdcWebWeb.WalletLive do
        chain: nil,
        offline: false,
        awaiting: false,
-       contracts_sent: nil
+       contracts_sent: nil,
+       public_key: nil,
+       registry_sent: nil
      )}
   end
 
@@ -66,11 +76,49 @@ defmodule BrdcWebWeb.WalletLive do
            balance: Integer.to_string(c.pending_balance),
            transfer_base: Integer.to_string(c.transfer_base),
            per_byte: Integer.to_string(c.per_byte),
-           contract_fee: Integer.to_string(c.contract_fee)
+           contract_fee: Integer.to_string(c.contract_fee),
+           credential_fee: Integer.to_string(c.credential_fee),
+           time: Integer.to_string(c.time)
          }, assign(socket, chain: c, offline: false)}
 
       {:error, :offline} ->
         {:reply, %{ok: false, error: "offline"}, assign(socket, offline: true)}
+    end
+  end
+
+  # assinatura coletiva: o navegador manda o corpo da proposta (campos, sem segredo) e as aprovações (assinaturas)
+  def handle_event("org:propose", %{"body" => hex}, %{assigns: %{address: address}} = socket)
+      when is_binary(hex) and is_binary(address) do
+    with {:ok, bin} <- Base.decode16(hex, case: :mixed),
+         {:ok, id} <- Chain.propose(bin) do
+      send(self(), :refresh)
+      {:reply, %{ok: true, id: Base.encode16(id, case: :lower)}, socket}
+    else
+      {:error, reason} when is_atom(reason) ->
+        {:reply, %{ok: false, error: Atom.to_string(reason)}, socket}
+
+      _ ->
+        {:reply, %{ok: false, error: "malformed"}, socket}
+    end
+  end
+
+  def handle_event(
+        "org:approve",
+        %{"id" => id_hex, "approval" => ap_hex},
+        %{assigns: %{address: address}} = socket
+      )
+      when is_binary(id_hex) and is_binary(ap_hex) and is_binary(address) do
+    with {:ok, <<_::256>> = id} <- Base.decode16(id_hex, case: :mixed),
+         {:ok, <<_::768>> = approval} <- Base.decode16(ap_hex, case: :mixed),
+         {:ok, n} <- Chain.approve(id, approval) do
+      send(self(), :refresh)
+      {:reply, %{ok: true, approvals: n}, socket}
+    else
+      {:error, reason} when is_atom(reason) ->
+        {:reply, %{ok: false, error: Atom.to_string(reason)}, socket}
+
+      _ ->
+        {:reply, %{ok: false, error: "malformed"}, socket}
     end
   end
 
@@ -102,7 +150,7 @@ defmodule BrdcWebWeb.WalletLive do
     {chain, offline} = load_chain(address)
     Process.send_after(self(), :refresh, refresh_delay(chain))
     socket = assign(socket, chain: chain, offline: offline, awaiting: awaiting?(socket, chain))
-    {:noreply, push_contracts(socket, address, chain)}
+    {:noreply, socket |> push_contracts(address, chain) |> push_registry(address, chain)}
   end
 
   def handle_info(:refresh, socket), do: {:noreply, socket}
@@ -123,6 +171,44 @@ defmodule BrdcWebWeb.WalletLive do
         socket
     end
   end
+
+  # credenciais do titular, tipos que a chave pode assinar e propostas dos seus órgãos (só se a chave é conhecida)
+  defp push_registry(socket, _address, nil), do: socket
+  defp push_registry(%{assigns: %{public_key: nil}} = socket, _address, _chain), do: socket
+
+  defp push_registry(%{assigns: %{public_key: pub}} = socket, address, chain) do
+    case Chain.registry(address, pub) do
+      {:ok, reg} ->
+        payload =
+          Map.merge(reg, %{
+            address: address,
+            public_key: Base.encode16(pub, case: :lower),
+            time: Integer.to_string(now(chain))
+          })
+
+        if payload == socket.assigns.registry_sent,
+          do: socket,
+          else: socket |> assign(registry_sent: payload) |> push_event("registry", payload)
+
+      {:error, _} ->
+        socket
+    end
+  end
+
+  # sem blocos vazios, o horário do último bloco fica parado; o próximo bloco usa o relógio, então a tela também
+  defp now(chain), do: max(chain.time, System.os_time(:second))
+
+  # a chave pública só é aceita se bate com o endereço (o servidor não guarda chave de outra pessoa)
+  defp public_key_for(address, hex) when is_binary(hex) do
+    with {:ok, <<_::256>> = pub} <- Base.decode16(hex, case: :mixed),
+         true <- Address.from_public_key(pub) == address do
+      pub
+    else
+      _ -> nil
+    end
+  end
+
+  defp public_key_for(_address, _), do: nil
 
   defp load_chain(address) do
     case Chain.snapshot(address) do
@@ -182,6 +268,10 @@ defmodule BrdcWebWeb.WalletLive do
           <.send_panel />
 
           <.contracts_panel />
+
+          <.credentials_panel />
+
+          <.organ_panel />
 
           <div class="grid grid-cols-2 gap-3">
             <button

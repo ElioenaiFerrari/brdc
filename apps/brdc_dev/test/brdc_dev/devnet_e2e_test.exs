@@ -1,8 +1,8 @@
 defmodule BrdcDev.DevnetE2ETest do
   use ExUnit.Case, async: true
   alias BrdcCrypto.{Account, Address, Ed25519}
-  alias BrdcDev.{Devnet, Funding}
-  alias BrdcLedger.{Contracts, Tx}
+  alias BrdcDev.{Authority, Devnet, Funding}
+  alias BrdcLedger.{Approvals, Contracts, Credentials, Tx}
   alias BrdcNode.{Client, Genesis, Handler, Node}
   alias BrdcP2p.{Guard, PublicPort}
 
@@ -207,6 +207,82 @@ defmodule BrdcDev.DevnetE2ETest do
     {_devnet, _node, {host, port}} = boot(dir)
     assert {:error, "bad_query"} = PublicPort.request(host, port, :query, <<9, 1, 2>>)
     assert {:error, "bad_query"} = PublicPort.request(host, port, :query, <<1, 1, 2>>)
+    assert {:ok, _} = PublicPort.request(host, port, :status, <<>>)
+  end
+
+  test "assinatura coletiva pela rede: tipo criado pelas autoridades, proposta, aprovações, emissão",
+       %{tmp_dir: dir} do
+    {devnet, node, endpoint} = boot(dir)
+    accounts = for p <- ["m1", "m2", "m3"], do: elem(Account.from_mnemonic(@abandon, p), 1)
+    [m1, m2, m3] = accounts
+    {:ok, holder} = Account.from_mnemonic(@abandon, "titular")
+    {:ok, holder_hash} = Address.decode(holder.address)
+    {:ok, sender} = Account.from_mnemonic(@abandon, "remetente")
+    {:ok, sender_hash} = Address.decode(sender.address)
+    {:ok, status} = Client.status(endpoint)
+
+    # as autoridades de teste criam o tipo "cnh": órgão de 3 membros, 2 de 3
+    assert {:ok, _} =
+             Authority.create_type(endpoint, devnet, %{
+               id: "cnh",
+               organ: Enum.map(accounts, & &1.public_key),
+               threshold: 2
+             })
+
+    {:ok, _} = Funding.mint(endpoint, devnet, sender_hash, 5_000_000)
+    {:ok, 1} = Node.produce(node)
+
+    # o membro vê o tipo; quem não é do órgão, não
+    assert {:ok, [%{id: "cnh", threshold: 2, organ_size: 3, privacy: "public"}]} =
+             Client.types_for(endpoint, m1.public_key)
+
+    assert {:ok, []} = Client.types_for(endpoint, holder.public_key)
+
+    f = %{type: "cnh", id: "cnh-1", subject: holder_hash, data: "categoria=B", ref: ""}
+    assert {:ok, pid} = Client.propose(endpoint, f)
+    doc = Credentials.issue_doc(status.chain_id, f.type, f.id, f.subject, f.data, f.ref)
+
+    assert {:ok, 1} = Client.approve(endpoint, pid, Approvals.approval(doc, m1.seed))
+
+    assert {:error, :bad_approval} =
+             Client.approve(endpoint, pid, Approvals.approval(doc, holder.seed))
+
+    assert {:ok, 2} = Client.approve(endpoint, pid, Approvals.approval(doc, m3.seed))
+
+    # o membro m2 vê a proposta com as 2 aprovações e monta a transação
+    assert {:ok, [p]} = Client.proposals_for(endpoint, m2.public_key)
+    assert p.id == pid and length(p.approvals) == 2 and p.threshold == 2
+    assert {:ok, []} = Client.proposals_for(endpoint, holder.public_key)
+
+    {:ok, %{pending_nonce: nonce}} = Client.account(endpoint, sender_hash)
+    payload = Credentials.issue_payload(f.type, f.id, f.subject, f.data, f.ref, p.approvals)
+
+    tx =
+      %Tx{
+        chain_id: status.chain_id,
+        kind: 15,
+        nonce: nonce,
+        fee: 10_000,
+        sender_pub: sender.public_key,
+        payload: payload
+      }
+      |> Tx.sign(sender.seed)
+
+    assert {:ok, _} = Client.submit_tx(endpoint, Tx.encode(tx))
+    {:ok, 2} = Node.produce(node)
+
+    # o titular vê a credencial pendente; a proposta some
+    assert {:ok, [cred]} = Client.credentials_of(endpoint, holder_hash)
+    assert %{id: "cnh-1", type: "cnh", status: "pending", data: "categoria=B"} = cred
+    assert cred.active_at == cred.issued_at + 60
+    assert {:ok, []} = Client.proposals_for(endpoint, m1.public_key)
+  end
+
+  test "propostas e consultas malformadas voltam como erro, sem derrubar o nó", %{tmp_dir: dir} do
+    {_devnet, _node, {host, port}} = boot(dir)
+    assert {:error, "bad_proposal"} = PublicPort.request(host, port, :proposal, <<9, 1>>)
+    assert {:error, "malformed"} = PublicPort.request(host, port, :proposal, <<1, 1, 2, 3>>)
+    assert {:error, "bad_query"} = PublicPort.request(host, port, :query, <<2, 1, 2>>)
     assert {:ok, _} = PublicPort.request(host, port, :status, <<>>)
   end
 end

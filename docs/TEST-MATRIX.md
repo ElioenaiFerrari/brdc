@@ -139,6 +139,14 @@ Invariante → teste que o cobre. Linhas *planejadas* ainda não têm teste: ent
 | **A taxa mínima do JS é a do Elixir** (vetores) e é calculável antes de assinar | `send.test.mjs`; `ledger_test.exs` |
 | **Verificado à mão (Chrome 153):** criar, financiar, saldo aparece sozinho, enviar 12,5, destino e remetente conferem no nó | roteiro manual no Fluxo 14 |
 
+## Credenciais e assinatura coletiva (pronto)
+| Invariante | Teste |
+|---|---|
+| Documento, aprovações e carga da emissão no JS são **iguais** aos do Elixir | `assets/js/crypto/proposals.test.mjs` + `vectors/tx.json` |
+| Só membros do órgão aprovam; duplicada não conta; outro documento é recusado; teto de propostas | `apps/brdc_node/test/brdc_node/proposals_test.exs` |
+| Sem blocos novos, a janela de contestação vence pelo relógio (conferência no horário do próximo bloco) | `proposals_test.exs` ("a janela de contestação vence pelo relógio") |
+| Com M aprovações a credencial é emitida; com menos, o nó recusa | `proposals_test.exs` (ciclo completo), `devnet_e2e_test.exs` (pela rede) |
+
 ## Contratos entre partes na carteira (pronto)
 | Invariante | Teste |
 |---|---|

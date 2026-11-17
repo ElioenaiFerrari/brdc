@@ -13,6 +13,7 @@ defmodule BrdcWebWeb.Wallet.Chain do
           height: non_neg_integer(),
           time: non_neg_integer(),
           contract_fee: non_neg_integer(),
+          credential_fee: non_neg_integer(),
           balance: non_neg_integer(),
           pending_balance: non_neg_integer(),
           nonce: non_neg_integer(),
@@ -50,6 +51,7 @@ defmodule BrdcWebWeb.Wallet.Chain do
          height: st.height,
          time: st.time,
          contract_fee: st.contract_fee,
+         credential_fee: st.credential_fee,
          pending: st.pending,
          transfer_base: st.transfer_base,
          per_byte: st.per_byte,
@@ -91,6 +93,88 @@ defmodule BrdcWebWeb.Wallet.Chain do
     }
   end
 
+  @doc """
+  Credenciais do titular, tipos que a chave pública pode assinar e propostas dos seus órgãos, no formato do
+  navegador (endereços `brdc1…`, hexadecimal, números como texto).
+  """
+  @spec registry(String.t(), <<_::256>>) :: {:ok, map()} | {:error, :offline}
+  def registry(address, <<_::256>> = pub) do
+    with endpoint when endpoint != nil <- endpoint(),
+         {:ok, hash} <- Address.decode(address),
+         {:ok, creds} <- Client.credentials_of(endpoint, hash),
+         {:ok, types} <- Client.types_for(endpoint, pub),
+         {:ok, props} <- Client.proposals_for(endpoint, pub) do
+      {:ok,
+       %{
+         credentials: Enum.map(creds, &cred_for_browser/1),
+         types: Enum.map(types, &type_for_browser/1),
+         proposals: Enum.map(props, &proposal_for_browser/1)
+       }}
+    else
+      _ -> {:error, :offline}
+    end
+  end
+
+  defp cred_for_browser(c) do
+    %{
+      id: c.id,
+      type: c.type,
+      data: Base.encode16(c.data, case: :lower),
+      ref: c.ref,
+      status: c.status,
+      issued_at: Integer.to_string(c.issued_at),
+      active_at: Integer.to_string(c.active_at),
+      expires_at: Integer.to_string(c.expires_at)
+    }
+  end
+
+  defp type_for_browser(t) do
+    %{
+      id: t.id,
+      threshold: t.threshold,
+      organ_size: t.organ_size,
+      privacy: t.privacy,
+      contest_window: Integer.to_string(t.contest_window),
+      validity: Integer.to_string(t.validity)
+    }
+  end
+
+  defp proposal_for_browser(p) do
+    %{
+      id: Base.encode16(p.id, case: :lower),
+      type: p.type,
+      cred_id: p.cred_id,
+      subject: Bech32m.encode("brdc", p.subject),
+      data: Base.encode16(p.data, case: :lower),
+      ref: p.ref,
+      approvals: Enum.map(p.approvals, &Base.encode16(&1, case: :lower)),
+      threshold: p.threshold
+    }
+  end
+
+  @doc "Propõe uma emissão: o corpo (`<<1, campos>>`) já vem montado pelo navegador."
+  @spec propose(binary()) :: {:ok, <<_::256>>} | {:error, atom()}
+  def propose(<<1, fields::binary>>) do
+    case endpoint() do
+      nil ->
+        {:error, :offline}
+
+      {host, port} ->
+        normalize(BrdcP2p.PublicPort.request(host, port, :proposal, <<1, fields::binary>>))
+    end
+  end
+
+  def propose(_), do: {:error, :malformed}
+
+  @doc "Repassa a aprovação (`chave ‖ assinatura`) de um membro a uma proposta."
+  @spec approve(<<_::256>>, <<_::768>>) :: {:ok, non_neg_integer()} | {:error, atom()}
+  def approve(<<_::256>> = id, <<_::768>> = approval) do
+    case endpoint() do
+      nil -> {:error, :offline}
+      endpoint -> Client.approve(endpoint, id, approval) |> normalize()
+    end
+  end
+
   @doc "Repassa uma transação assinada (bytes) ao nó."
   @spec submit(binary()) :: {:ok, <<_::256>>} | {:error, atom()}
   def submit(tx_bin) do
@@ -100,7 +184,18 @@ defmodule BrdcWebWeb.Wallet.Chain do
     end
   end
 
-  defp normalize({:ok, id}), do: {:ok, id}
+  defp normalize({:ok, <<_::256>> = id}), do: {:ok, id}
+  defp normalize({:ok, n}) when is_integer(n), do: {:ok, n}
+
+  defp normalize({:error, reason}) when is_binary(reason), do: {:error, reason_atom(reason)}
+
   defp normalize({:error, reason}) when is_atom(reason), do: {:error, reason}
   defp normalize({:error, _}), do: {:error, :offline}
+
+  # motivo vindo da rede: só vira átomo se já existir (nunca criamos átomos a partir de texto de fora)
+  defp reason_atom(text) do
+    String.to_existing_atom(text)
+  rescue
+    ArgumentError -> :rejected
+  end
 end

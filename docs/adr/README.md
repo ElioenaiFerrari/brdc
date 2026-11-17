@@ -27,6 +27,7 @@ Cada decisão de segurança ou produto vira um ADR: contexto, decisão, alternat
 | [0021](0021-vault-never-stores-passphrase.md) | O cofre da carteira nunca guarda a passphrase | Aceito |
 | [0022](0022-visual-identity-and-wallet-scope.md) | Identidade visual escura com as cores do Brasil e escopo da carteira | Aceito |
 | [0023](0023-local-node-and-wallet-as-client.md) | Nó local de um validador e carteira como cliente da porta pública | **Proposto** |
+| [0024](0024-collective-signing-by-organs.md) | Assinatura coletiva dos órgãos: propostas no nó, aprovações no navegador | **Proposto** |
 
 ## Decisões PENDENTES (esperam o dono do produto)
 Nada abaixo entra em código antes da resposta.
