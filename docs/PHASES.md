@@ -6,7 +6,7 @@ Cada fase só começa com a anterior com testes passando **e documentada**. Ao f
 |---|---|---|---|
 | 0 | Fundação: umbrella, qualidade, diagramas, docs-base e ADRs | todos | **em andamento** |
 | 1 | Criptografia e carteira: hash etiquetado, Ed25519, BIP-39, SLIP-10, passphrase, endereço, assinatura; vetores oficiais iguais em Elixir e JS | `brdc_crypto` | **pronta** |
-| 2 | Livro-razão e a moeda: contas, transação, bloco, estado, transferência, taxa, reservas e mint/burn por emissores M-de-N, invariantes por propriedade | `brdc_ledger` | planejado |
+| 2 | Livro-razão e a moeda: contas, transação, bloco, estado, transferência, taxa, reservas e mint/burn por emissores M-de-N, invariantes por propriedade | `brdc_ledger` | **pronta** (persistência em disco fica com o ADR-0012) |
 | 3 | Consenso BFT: motor sem I/O, rodadas, votos, commit, sem blocos vazios, rotação do conjunto, simulações de falha | `brdc_consensus` | planejado |
 | 4 | P2P: Noise, portas, limites, registros de endereço, descoberta, genesis, roteiro de dois computadores | `brdc_p2p` | planejado |
 | 5 | Contratos nativos: bens e propriedade, credenciais (CNH, identificação, casamento, divórcio), contratos entre partes | `brdc_ledger` | planejado |

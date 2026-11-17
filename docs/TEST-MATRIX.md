@@ -19,10 +19,22 @@ Invariante → teste que o cobre. Linhas *planejadas* ainda não têm teste: ent
 | Codificação determinística: ida e volta; bytes sobrando ou faltando e lixo são recusados sem exceção | `properties_test.exs` |
 | **Elixir e JS concordam** (semente, chave pública, endereço, SLIP-10, hash etiquetado) | `shared_vectors_test.exs` (Elixir) e `make js-vectors` (Node), ambos sobre `vectors/crypto.json` |
 
+## Fase 2 (pronta, exceto persistência)
+| Invariante | Teste |
+|---|---|
+| Assinatura cobre todos os campos; lixo não decodifica | `ledger_test.exs` (`assinatura e codificação`), `properties_test.exs` |
+| Mint e burn só com M-de-N emissores, aprovação não vale para outro valor, referência não repete, só o dono queima | `ledger_test.exs` (`mint e burn por M-de-N`) |
+| Replay, nonce fora de ordem, outra rede, saldo insuficiente, taxa baixa (tabela ADR-0014) | `ledger_test.exs` (`transferência`) |
+| Bloco atômico, sem bloco vazio, altura/prev_hash/state_root conferidos, taxa repartida entre quem assinou | `ledger_test.exs` (`bloco`) |
+| Atestado de reserva: só com M emissores, sequência estritamente crescente, não altera saldos nem oferta, subcobertura não congela | `ledger_test.exs` (`atestado de reserva`) |
+| **Oferta = emitido − queimado = soma dos saldos** em sequências aleatórias | `properties_test.exs` |
+| Mesmo bloco, mesmo estado, mesma raiz (determinismo) | `properties_test.exs` |
+
+*Fica para depois:* persistência em disco e árvore esparsa (ADR-0012, ainda proposto).
+
 ## Planejado por fase
 | Fase | Invariantes (a testar) |
 |---|---|
-| 2 | Determinismo do ledger (mesmo bloco, mesmo estado, mesmo resultado); oferta total = emitido − queimado (propriedade); saldo nunca negativo; nonce impede replay; só M-de-N de emissores faz mint e burn; taxa cobrada e distribuída |
 | 3 | Nunca dois blocos finais na mesma altura (simulação com falhas, partição e proponente bizantino); bloco só final com mais de 2/3; sem quórum a rede pausa; sem blocos vazios; rotação do conjunto por mais de 2/3 |
 | 4 | Só validador do conjunto abre sessão; outra rede ou genesis é recusada; quadro adulterado ou repetido não decifra; limites e banimento; registros de endereço assinados e atualizados |
 | 5 | Bens: transferência só pelo dono, escrow e veto; credenciais: janela de contestação, validade, veto, revogação, privada vs pública; casamento por cônjuge e divórcio revoga casamento; contratos: só as transições do modelo, valores em escrow conservados |

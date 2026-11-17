@@ -18,6 +18,7 @@ Tudo em **pt-BR** (código e identificadores em inglês). A regra é a **documen
 Um fluxo por funcionalidade (texto e diagrama) em `docs/flows/`, à medida que cada fase é entregue:
 
 - [01 — Da frase ao endereço](flows/01-phrase-to-address.md) (Fase 1)
+- [02 — Como um bloco é executado](flows/02-block-execution.md) (Fase 2)
 
 A [arquitetura](ARCHITECTURE.md) dá a visão geral.
 

@@ -16,14 +16,16 @@ Cada decisão de segurança ou produto vira um ADR: contexto, decisão, alternat
 | [0010](0010-account-model-address-and-decimals.md) | Modelo de conta, endereço e casas decimais | Aceito |
 | [0011](0011-deterministic-encoding-and-tagged-hash.md) | Codificação determinística e hash etiquetado | Aceito |
 | [0012](0012-state-tree-and-storage.md) | Árvore de estado e armazenamento | **Proposto** |
+| [0013](0013-governance-of-issuers-and-validators.md) | Governança de emissores e validadores (P1) | Aceito |
+| [0014](0014-fee-table-and-no-halving.md) | Tabela de taxas, repartição e sem halving (P2) | Aceito |
 
 ## Decisões PENDENTES (esperam o dono do produto)
 Nada abaixo entra em código antes da resposta.
 
 | # | Decisão | Quando precisa |
 |---|---|---|
-| P1 | **Governança inicial:** quem são os emissores e os validadores, e como o conjunto muda (quórum de rotação, quem propõe) | Fases 2 e 3 |
-| P2 | **Tabela de taxas** (por byte e por tipo) e a regra de repartição entre validadores | Fase 2 |
+| P1 | ~~Governança inicial~~ → proposta no [ADR-0013](0013-governance-of-issuers-and-validators.md), aceito | Fases 2 e 3 |
+| P2 | ~~Tabela de taxas~~ → proposta no [ADR-0014](0014-fee-table-and-no-halving.md), aceito | Fase 2 |
 | P3 | **Tempo de agrupamento de blocos** (o intervalo antes de fechar um bloco com transações pendentes) | Fase 3 |
 | P4 | **Janelas** de contestação e veto padrão para bens e credenciais | Fase 5 |
 | P5 | **Catálogo inicial de contratos entre partes** (compra e venda, aluguel, empréstimo…) e seus parâmetros | Fase 5 |

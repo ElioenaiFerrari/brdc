@@ -14,5 +14,6 @@ Leia na ordem; cada uma se apoia na anterior.
 8. [Credenciais e bens](08-credentials-and-assets.md): CNH, identificação, casamento, divórcio e transferência de propriedade.
 9. [OTP e desempenho](09-otp-and-performance.md): processos, supervisão, e onde GenStage, Broadway, Flow e Reactor cabem (e onde não).
 10. [Como ler o código da Fase 1](10-reading-phase-1-code.md): mapa de leitura de `brdc_crypto`, com exemplos que rodam.
+11. [Como ler o código da Fase 2](11-reading-phase-2-code.md): mapa de leitura de `brdc_ledger`.
 
 Termos novos estão no [GLOSSARY](../GLOSSARY.md). Ao fim de cada fase de implementação, a página correspondente ganha a seção **"Como ler o código desta fase"**.

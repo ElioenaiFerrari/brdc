@@ -2,7 +2,7 @@
 
 Uma **stablecoin brasileira** (1 BRDC = 1 BRL) numa blockchain própria em **Elixir**, com **contratos nativos** de propriedade, credenciais (CNH, identificação, casamento, divórcio…) e contratos entre partes, uma rede **P2P** de validadores e uma **carteira web não custodial**. Projeto de estudo: sem auditoria, sem validade jurídica, sem integração bancária real.
 
-> **Estado atual: Fase 1 pronta (criptografia e derivação de carteira).** `brdc_crypto` tem hash etiquetado, Ed25519, BIP-39 com passphrase, SLIP-10, endereços `brdc1…` e codificação determinística, com vetores oficiais conferidos também em JavaScript. **Ainda não há moeda, rede nem carteira web funcionando**: elas chegam nas fases seguintes ([roteiro](docs/PHASES.md)).
+> **Estado atual: Fase 2 pronta (ledger em memória: transferência, mint e burn por M-de-N, atestado de reserva, taxas, blocos atômicos).** A Fase 1 também. `brdc_crypto` tem hash etiquetado, Ed25519, BIP-39 com passphrase, SLIP-10, endereços `brdc1…` e codificação determinística, com vetores oficiais conferidos também em JavaScript. **Ainda não há moeda, rede nem carteira web funcionando**: elas chegam nas fases seguintes ([roteiro](docs/PHASES.md)).
 
 ![Arquitetura da BRDC: a carteira web assina no navegador e envia a transação ao nó, que a coloca no mempool do consenso BFT; o ledger aplica o bloco decidido e os validadores conversam por sessões Noise](docs/diagrams/architecture-overview.png)
 
@@ -20,7 +20,7 @@ Uma **stablecoin brasileira** (1 BRDC = 1 BRL) numa blockchain própria em **Eli
 | App | Papel | Fase |
 |---|---|---|
 | `brdc_crypto` | hash etiquetado, Ed25519, BIP-39, SLIP-10, passphrase, endereços `brdc1…`, codificação determinística (**pronto**) | 1 |
-| `brdc_ledger` | contas, transações, blocos, estado e módulos nativos (moeda, bens, credenciais, contratos) | 2 e 5 |
+| `brdc_ledger` (moeda pronta) | contas, transações, blocos, estado e módulos nativos (moeda, bens, credenciais, contratos) | 2 e 5 |
 | `brdc_consensus` | motor BFT sem I/O: rodadas, votos, certificado de commit | 3 |
 | `brdc_p2p` | sessões Noise, portas de pares e pública, limites, descoberta | 4 |
 | `brdc_node` | nó completo (OTP): supervisão, mempool, armazenamento, RPC | 7 |
