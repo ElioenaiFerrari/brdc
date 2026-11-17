@@ -1,0 +1,156 @@
+<Layouts.app flash={@flash}>
+  <%!-- Pré-visualização da identidade visual (Fase 6). Dados de exemplo, nada é real. --%>
+  <div class="grid gap-8 lg:grid-cols-2 lg:items-start lg:gap-12">
+    <%!-- TELA 1: Início --%>
+    <section aria-labelledby="t-home" class="space-y-6">
+      <h1 id="t-home" class="sr-only">Início</h1>
+
+      <div class="brdc-card-glow p-6">
+        <p class="text-sm text-[var(--brdc-muted)]">Saldo</p>
+        <p class="mt-2">
+          <.amount units={12_480_570_000} class="text-5xl" unit="BRDC" />
+        </p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <.chip tone={:yellow} icon="hero-scale">1 BRDC = R$ 1,00</.chip>
+          <.chip tone={:green} icon="hero-shield-check">Reserva atestada</.chip>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-3">
+        <button type="button" class="brdc-btn-primary !w-full !px-2">
+          <.icon name="hero-arrow-up-right" class="size-5" /> Enviar
+        </button>
+        <button type="button" class="brdc-btn-ghost !px-2">
+          <.icon name="hero-arrow-down-left" class="size-5" /> Receber
+        </button>
+        <button type="button" class="brdc-btn-ghost !px-2">
+          <.icon name="hero-plus" class="size-5" /> Emitir
+        </button>
+      </div>
+
+      <div class="brdc-card p-5">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-bold">Assinaturas pendentes</h2>
+          <.chip tone={:blue}>2</.chip>
+        </div>
+        <ul class="mt-4 space-y-3">
+          <li class="brdc-inset flex items-center justify-between p-4">
+            <div>
+              <p class="font-semibold">Emitir CNH · tipo cnh</p>
+              <p class="text-sm text-[var(--brdc-muted)]">1 de 2 assinaturas do órgão</p>
+            </div>
+            <.chip tone={:yellow} icon="hero-pencil-square">Assinar</.chip>
+          </li>
+          <li class="brdc-inset flex items-center justify-between p-4">
+            <div>
+              <p class="font-semibold">Veto · casa-1</p>
+              <p class="text-sm text-[var(--brdc-muted)]">prazo em 23 h 12 min</p>
+            </div>
+            <.chip tone={:yellow} icon="hero-pencil-square">Assinar</.chip>
+          </li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="mb-3 flex items-center justify-between">
+          <h2 class="text-xl font-bold">Credenciais</h2>
+          <.chip>3</.chip>
+        </div>
+        <div class="space-y-3">
+          <article class="brdc-card flex items-center gap-4 p-4">
+            <span class="grid size-12 place-items-center rounded-2xl bg-[var(--brdc-surface-2)]">
+              <.icon name="hero-identification" class="size-6 text-[var(--brdc-green-text)]" />
+            </span>
+            <div class="min-w-0 flex-1">
+              <p class="font-semibold">CNH</p>
+              <p class="text-sm text-[var(--brdc-muted)]">válida até 14/11/2036</p>
+            </div>
+            <.chip tone={:green} icon="hero-check-badge">Ativa</.chip>
+          </article>
+          <article class="brdc-card flex items-center gap-4 p-4">
+            <span class="grid size-12 place-items-center rounded-2xl bg-[var(--brdc-surface-2)]">
+              <.icon name="hero-heart" class="size-6 text-[var(--brdc-blue-text)]" />
+            </span>
+            <div class="min-w-0 flex-1">
+              <p class="font-semibold">Certidão de casamento</p>
+              <p class="text-sm text-[var(--brdc-muted)]">dados só com você</p>
+            </div>
+            <.chip tone={:blue} icon="hero-lock-closed">Privada</.chip>
+          </article>
+          <article class="brdc-card flex items-center gap-4 p-4">
+            <span class="grid size-12 place-items-center rounded-2xl bg-[var(--brdc-surface-2)]">
+              <.icon name="hero-document-minus" class="size-6 text-[var(--brdc-yellow)]" />
+            </span>
+            <div class="min-w-0 flex-1">
+              <p class="font-semibold">Certidão de divórcio</p>
+              <p class="text-sm text-[var(--brdc-muted)]">contestação até amanhã, 09:40</p>
+            </div>
+            <.chip tone={:yellow} icon="hero-clock">Pendente</.chip>
+          </article>
+        </div>
+      </div>
+
+      <div>
+        <h2 class="mb-3 text-xl font-bold">Bens e contratos</h2>
+        <div class="grid grid-cols-2 gap-3">
+          <article class="brdc-card p-4">
+            <.icon name="hero-home-modern" class="size-6 text-[var(--brdc-green-text)]" />
+            <p class="mt-3 font-semibold">casa-1</p>
+            <p class="text-sm text-[var(--brdc-muted)]">imóvel · veto até 14:03</p>
+            <div class="mt-3">
+              <.chip tone={:yellow}>Em negociação</.chip>
+            </div>
+          </article>
+          <article class="brdc-card p-4">
+            <.icon name="hero-key" class="size-6 text-[var(--brdc-blue-text)]" />
+            <p class="mt-3 font-semibold">Aluguel</p>
+            <p class="text-sm text-[var(--brdc-muted)]">parcela 2 de 12</p>
+            <div class="mt-3">
+              <.chip tone={:green}>Em dia</.chip>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <%!-- TELA 2: Enviar --%>
+    <section aria-labelledby="t-send" class="space-y-4">
+      <h1 id="t-send" class="text-center text-lg font-bold">Enviar</h1>
+
+      <div class="brdc-card p-5">
+        <p class="text-sm text-[var(--brdc-muted)]">Você envia</p>
+        <div class="mt-3 flex items-end justify-between gap-3">
+          <.chip icon="hero-banknotes">BRDC</.chip>
+          <p class="brdc-amount text-5xl">12,<span class="brdc-dim">50</span></p>
+        </div>
+        <div class="mt-3 flex items-center justify-between text-sm text-[var(--brdc-muted)]">
+          <span>Saldo 12.480,57</span>
+          <span>≈ R$ 12,50</span>
+        </div>
+        <div class="mt-3 flex gap-2">
+          <button type="button" class="brdc-chip">25%</button>
+          <button type="button" class="brdc-chip">50%</button>
+          <button type="button" class="brdc-chip">Máx.</button>
+        </div>
+      </div>
+
+      <div class="brdc-card p-5">
+        <p class="text-sm text-[var(--brdc-muted)]">Para</p>
+        <p class="mt-2 break-all font-mono text-sm">brdc18yk04cx53nt3yla50…q7cldk</p>
+        <div class="mt-3 flex gap-2">
+          <.chip tone={:green} icon="hero-check-circle">Endereço válido</.chip>
+          <.chip>taxa ≈ 0,0013</.chip>
+        </div>
+      </div>
+
+      <.keypad />
+
+      <button type="button" class="brdc-btn-primary">Continuar</button>
+      <p class="text-center text-xs text-[var(--brdc-muted)]">
+        Você confirma o envio e a chave assina no seu navegador. O servidor nunca vê sua frase.
+      </p>
+    </section>
+  </div>
+
+  <.bottom_nav current={:home} />
+</Layouts.app>

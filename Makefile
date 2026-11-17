@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
-.PHONY: help setup format lint dialyzer test check js-vectors docs-check diagrams
+.PHONY: help setup format lint dialyzer test check js-test js-vectors docs-check diagrams
 
 help: ## Lista os atalhos
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  \033[1m%-14s\033[0m %s\n", $$1, $$2}'
@@ -20,8 +20,12 @@ dialyzer: ## Tipos (dialyzer); a primeira vez monta o PLT e demora
 test: ## Testes de todos os apps
 	mix test
 
-check: ## Portão de qualidade: formato, credo e testes (o mesmo do CI)
+check: ## Portão de qualidade: formato, credo, testes e criptografia do navegador (o mesmo do CI)
 	mix check
+	node --test apps/brdc_web/assets/js/crypto/crypto.test.mjs 2>&1 | grep -E '^ℹ (tests|pass|fail)|✖'
+
+js-test: ## Testa a criptografia do navegador (Node 24, mesmo crypto.subtle) contra os vetores do Elixir
+	node --test apps/brdc_web/assets/js/crypto/crypto.test.mjs
 
 js-vectors: ## Confere em JavaScript (Node) os mesmos vetores de cripto do Elixir
 	node tools/js/verify-vectors.mjs

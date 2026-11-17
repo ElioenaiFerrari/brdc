@@ -3,6 +3,7 @@
 Tudo em **pt-BR** (código e identificadores em inglês). A regra é a **documentação viva**: cada mudança atualiza a doc no mesmo trabalho. Veja as regras no [CLAUDE.md](../CLAUDE.md).
 
 ## Para entender (comece aqui)
+- [Identidade visual e mapa da carteira](design/README.md)
 - [Guia de conceitos](concepts/README.md): blockchain, estado, hash e assinatura, carteira HD e passphrase, consenso BFT, stablecoin, contratos nativos, P2P, credenciais e bens. Cada página explica o conceito do zero e mostra como a BRDC o usa.
 - [Roteiro das fases](PHASES.md): o que existe, o que vem e em que ordem.
 - [Arquitetura](ARCHITECTURE.md): quem fala com quem e por quê.
@@ -28,6 +29,7 @@ Um fluxo por funcionalidade (texto e diagrama) em `docs/flows/`, à medida que c
 - [09 — Transferência de propriedade de um bem](flows/09-asset-trade.md) (Fase 5)
 - [10 — Credenciais (CNH, identificação, casamento e divórcio)](flows/10-credentials.md) (Fase 5)
 - [11 — Contratos entre partes (compra e venda, aluguel, empréstimo)](flows/11-contracts.md) (Fase 5)
+- [12 — Como a carteira assina no navegador](flows/12-browser-signing.md) (Fase 6)
 
 A [arquitetura](ARCHITECTURE.md) dá a visão geral.
 

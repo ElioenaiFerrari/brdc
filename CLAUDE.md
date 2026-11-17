@@ -89,6 +89,8 @@ make              # lista os atalhos
 - **Revisão geral no fim da última fase** (pedido do dono): até lá, seguir o plano por fase sem refazer o que já foi aceito; ao fim, analisar tudo (segurança, desenho, documentação, simplificações).
 - **Carteira = autocustódia** (não custodial): só o usuário guarda as chaves; a decisão sobre guardar a passphrase no cofre fica para a Fase 6 (recomendação: nunca guardar).
 
+- **Identidade visual da BRDC** (decisão do dono): tema **escuro** com as cores do Brasil (verde, azul, amarelo, branco), estilo fintech moderna; **não** usar o tema claro do Teko na carteira, no logo nem nas peças novas. Tokens e regras em `docs/design/README.md` e `apps/brdc_web/assets/css/app.css`. A carteira **emite bens, contratos e credenciais** (com assinatura coletiva M-de-N), não só envia e recebe.
+
 ## Fora de escopo por ora
 
 Votos e eleições · integração bancária real (Pix/custódia) · validade jurídica · auditoria · hardware wallet · extensão de navegador · validadores abertos com stake (futuro).

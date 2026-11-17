@@ -106,12 +106,23 @@ Invariante → teste que o cobre. Linhas *planejadas* ainda não têm teste: ent
 | **Os modelos são dados com vocabulário fechado**: nenhum estado, ator, condição, efeito ou expressão desconhecidos | `contracts_test.exs` (`os modelos são dados…`) |
 | **Em qualquer sequência:** escrow global = soma dos escrows dos contratos; estado final sem dinheiro retido; nada é criado | `contracts_test.exs` (`propriedade`) |
 
+## Fase 6, parte da criptografia do navegador (pronta; telas e cofre ainda não)
+| Invariante | Teste |
+|---|---|
+| SHA3-256 próprio: vetores NIST, concordância com o Elixir em todos os tamanhos do vetor (bordas de bloco) e com o Node em 1.000 entradas aleatórias | `assets/js/crypto/crypto.test.mjs`; `brdc_crypto/test/.../hash_vectors_test.exs` |
+| BIP-39, SLIP-10, bech32m e contas (com passphrase) iguais aos vetores oficiais e ao Elixir | `crypto.test.mjs` |
+| **Transação assinada no JS = bytes, assinatura e id idênticos aos do Elixir** | `crypto.test.mjs`; `brdc_ledger/test/.../wallet_vectors_test.exs` |
+| A chave de assinatura é não extraível (`exportKey` falha) | `crypto.test.mjs` |
+| `Number` impreciso (acima de 2^53) é recusado; `BigInt` e texto passam | `crypto.test.mjs` |
+| Formatação de valores: trunca (nunca mostra mais que o saldo), ida e volta nas 6 casas | `brdc_web/test/brdc_web_web/format_test.exs` |
+| CSP estrita: sem `unsafe-inline` nem `unsafe-eval`, sem script em linha | `brdc_web/test/.../page_controller_test.exs` |
+
 ## Planejado por fase
 | Fase | Invariantes (a testar) |
 |---|---|
 | 3 (resto) | Sem blocos vazios (no nó); rotação do conjunto por mais de 2/3; WAL e recuperação |
 | 7 (inclui o resto da 4) | Roteiro de dois computadores validado |
-| 6 | Carteira: frase e passphrase nunca saem do navegador; cofre cifrado; assinatura no navegador aceita pelo nó; CSP sem scripts de terceiros |
+| 6 (resto) | Cofre cifrado (AES-GCM) e destravar; frase e passphrase nunca saem do navegador (teste de rede); telas de bens, contratos, credenciais e assinatura coletiva; carteira de ponta a ponta contra uma devnet |
 | 7 | Explorador mostra quem assinou cada bloco; roteiro de dois computadores validado |
 
 ## Limites honestos

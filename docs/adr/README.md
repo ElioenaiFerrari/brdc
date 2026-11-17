@@ -15,7 +15,7 @@ Cada decisão de segurança ou produto vira um ADR: contexto, decisão, alternat
 | [0009](0009-no-freezing-uncensored-brdc.md) | Sem congelamento de contas: BRDC sem censura | Aceito, com riscos assumidos |
 | [0010](0010-account-model-address-and-decimals.md) | Modelo de conta, endereço e casas decimais | Aceito |
 | [0011](0011-deterministic-encoding-and-tagged-hash.md) | Codificação determinística e hash etiquetado | Aceito |
-| [0012](0012-state-tree-and-storage.md) | Árvore de estado e armazenamento | **Proposto** |
+| [0012](0012-state-tree-and-storage.md) | Árvore de estado e armazenamento | Aceito |
 | [0013](0013-governance-of-issuers-and-validators.md) | Governança de emissores e validadores (P1) | Aceito |
 | [0014](0014-fee-table-and-no-halving.md) | Tabela de taxas, repartição e sem halving (P2) | Aceito |
 | [0015](0015-p2p-over-mutual-tls-1-3.md) | Canal P2P: TLS 1.3 mútuo com chave fixada, só OTP (P6, parte de rede) | Aceito |
@@ -23,6 +23,9 @@ Cada decisão de segurança ou produto vira um ADR: contexto, decisão, alternat
 | [0017](0017-initial-contract-catalog.md) | Catálogo inicial de contratos entre partes (P5) | Aceito |
 | [0018](0018-assets-direct-trade-with-veto-window.md) | Bens: classes com órgão, negociação direta e janela de veto | Aceito |
 | [0019](0019-credentials-with-contest-window-and-revocation.md) | Credenciais: tipos com órgão, contestação, validade e revogação | Aceito |
+| [0020](0020-browser-crypto-webcrypto-without-dependencies.md) | Criptografia do navegador: WebCrypto e código próprio, sem dependências (P6) | Aceito |
+| [0021](0021-vault-never-stores-passphrase.md) | O cofre da carteira nunca guarda a passphrase | **Proposto** |
+| [0022](0022-visual-identity-and-wallet-scope.md) | Identidade visual escura com as cores do Brasil e escopo da carteira | Aceito |
 
 ## Decisões PENDENTES (esperam o dono do produto)
 Nada abaixo entra em código antes da resposta.
@@ -34,6 +37,6 @@ Nada abaixo entra em código antes da resposta.
 | P3 | **Tempo de agrupamento de blocos** (o intervalo antes de fechar um bloco com transações pendentes) | Fase 3 |
 | P4 | ~~Janelas~~ → resolvida no [ADR-0016](0016-block-time-and-windows-in-seconds.md) | Fase 5 |
 | P5 | ~~Catálogo de contratos~~ → resolvida no [ADR-0017](0017-initial-contract-catalog.md) | Fase 5 |
-| P6 | ~~Biblioteca Noise~~ → resolvida no [ADR-0015](0015-p2p-over-mutual-tls-1-3.md) (TLS 1.3 do OTP). **Falta:** biblioteca de Ed25519 no navegador (justificar supply chain) | Fase 6 |
+| P6 | ~~Biblioteca Noise~~ → resolvida no [ADR-0015](0015-p2p-over-mutual-tls-1-3.md) (TLS 1.3 do OTP). **Falta só a parte do navegador:** resolvida no [ADR-0020](0020-browser-crypto-webcrypto-without-dependencies.md) (WebCrypto e código próprio) | Fase 6 |
 | P7 | **Bibliotecas OTP por cenário** (GenStage, Broadway, Flow, Reactor, Benchee, Telemetry…): quais entram, onde e por quê, cada uma com justificativa de supply chain | Fases 2, 3, 4 e 7 |
 

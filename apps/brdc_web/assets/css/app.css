@@ -1,0 +1,174 @@
+/* See the Tailwind configuration guide for advanced usage
+   https://tailwindcss.com/docs/configuration */
+
+@import "tailwindcss" source(none);
+@import "phoenix-colocated/brdc_web/colocated.css";
+@source "../css";
+@source "../js";
+@source "../../lib/brdc_web_web";
+/* Required for Tailwind to automatically pick up changes in colocated CSS files in dev */
+@source "../../../../_build/dev/phoenix-colocated/brdc_web/*/";
+
+/* A Tailwind plugin that makes "hero-#{ICON}" classes available.
+   The heroicons installation itself is managed by your mix.exs */
+@plugin "../vendor/heroicons";
+
+/* daisyUI Tailwind Plugin. */
+@plugin "daisyui/packages/bundle/daisyui" {
+  themes: false;
+}
+
+/* Tema único da BRDC: escuro, com as cores do Brasil (verde, azul, amarelo e branco).
+   Ver docs/design/README.md. Contraste de texto >= 4.5:1 sobre as superfícies. */
+@plugin "daisyui/packages/bundle/daisyui-theme" {
+  name: "brdc";
+  default: true;
+  prefersdark: true;
+  color-scheme: "dark";
+  --color-base-100: #0d1210;
+  --color-base-200: #080c0a;
+  --color-base-300: #131a17;
+  --color-base-content: #f5f7f6;
+  --color-primary: #00a651;
+  --color-primary-content: #03110a;
+  --color-secondary: #2f6bff;
+  --color-secondary-content: #ffffff;
+  --color-accent: #ffdf00;
+  --color-accent-content: #1a1600;
+  --color-neutral: #1a2320;
+  --color-neutral-content: #f5f7f6;
+  --color-info: #6fa0ff;
+  --color-info-content: #06142e;
+  --color-success: #2bd576;
+  --color-success-content: #03110a;
+  --color-warning: #ffdf00;
+  --color-warning-content: #1a1600;
+  --color-error: #ff6b6b;
+  --color-error-content: #2a0606;
+  --radius-selector: 9999px;
+  --radius-field: 1rem;
+  --radius-box: 1.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* Add variants based on LiveView classes */
+@custom-variant phx-click-loading (.phx-click-loading&, .phx-click-loading &);
+@custom-variant phx-submit-loading (.phx-submit-loading&, .phx-submit-loading &);
+@custom-variant phx-change-loading (.phx-change-loading&, .phx-change-loading &);
+
+
+/* Make LiveView wrapper divs transparent for layout */
+[data-phx-session], [data-phx-teleported-src] { display: contents }
+
+/* This file is for your main application CSS */
+
+/* ---------------------------------------------------------------------------------------------
+   Identidade visual da BRDC (docs/design/README.md)
+   Fundo quase preto com brilho suave (verde e azul, um toque de amarelo) no topo, cartões escuros
+   de cantos bem arredondados, números grandes com decimais apagados e botão branco em pílula.
+   Sem fontes de terceiros: pilha do sistema (CSP estrita).
+   --------------------------------------------------------------------------------------------- */
+:root {
+  --brdc-bg: #050807;
+  --brdc-surface: #0d1210;
+  --brdc-surface-2: #131a17;
+  --brdc-line: rgb(255 255 255 / 0.08);
+  --brdc-text: #f5f7f6;
+  --brdc-muted: #8fa097;
+  --brdc-green: #00a651;
+  --brdc-green-text: #2bd576;
+  --brdc-blue: #2f6bff;
+  --brdc-blue-text: #6fa0ff;
+  --brdc-yellow: #ffdf00;
+  --brdc-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --brdc-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+html { color-scheme: dark; }
+
+body {
+  min-height: 100dvh;
+  font-family: var(--brdc-font);
+  color: var(--brdc-text);
+  background:
+    radial-gradient(60% 38% at 12% 0%, rgb(0 166 81 / 0.30), transparent 70%),
+    radial-gradient(55% 38% at 92% 0%, rgb(47 107 255 / 0.26), transparent 70%),
+    radial-gradient(28% 16% at 56% 0%, rgb(255 223 0 / 0.07), transparent 75%),
+    var(--brdc-bg);
+  background-repeat: no-repeat;
+}
+
+@layer components {
+  .brdc-card {
+    background: var(--brdc-surface);
+    border: 1px solid var(--brdc-line);
+    border-radius: 1.5rem;
+  }
+  .brdc-card-glow {
+    background:
+      radial-gradient(90% 120% at 0% 0%, rgb(0 166 81 / 0.22), transparent 60%),
+      radial-gradient(80% 120% at 100% 0%, rgb(47 107 255 / 0.18), transparent 60%),
+      var(--brdc-surface);
+    border: 1px solid var(--brdc-line);
+    border-radius: 1.75rem;
+  }
+  .brdc-inset {
+    background: var(--brdc-surface-2);
+    border: 1px solid var(--brdc-line);
+    border-radius: 1rem;
+  }
+  .brdc-chip {
+    display: inline-flex; align-items: center; gap: 0.375rem;
+    min-height: 2rem; padding: 0 0.875rem; border-radius: 9999px;
+    background: var(--brdc-surface-2); color: var(--brdc-text);
+    font-size: 0.8125rem; font-weight: 600;
+  }
+  .brdc-chip-green { background: rgb(43 213 118 / 0.14); color: var(--brdc-green-text); }
+  .brdc-chip-blue { background: rgb(111 160 255 / 0.14); color: var(--brdc-blue-text); }
+  .brdc-chip-yellow { background: rgb(255 223 0 / 0.14); color: var(--brdc-yellow); }
+  .brdc-btn-primary {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    min-height: 3.25rem; padding: 0 1.5rem; width: 100%;
+    background: #fff; color: #050807; border-radius: 9999px;
+    font-weight: 700; font-size: 1rem; cursor: pointer;
+    transition: transform 160ms ease, background-color 160ms ease;
+  }
+  .brdc-btn-primary:hover { background: #e9efec; }
+  .brdc-btn-primary:active { transform: scale(0.985); }
+  .brdc-btn-ghost {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    min-height: 3rem; padding: 0 1.25rem; border-radius: 9999px; cursor: pointer;
+    background: var(--brdc-surface-2); color: var(--brdc-text); font-weight: 600;
+    border: 1px solid var(--brdc-line); transition: background-color 160ms ease;
+  }
+  .brdc-btn-ghost:hover { background: #1a2420; }
+  .brdc-key {
+    min-height: 3.5rem; border-radius: 9999px; cursor: pointer;
+    font-size: 1.75rem; font-weight: 500; font-variant-numeric: tabular-nums;
+    background: transparent; color: var(--brdc-text); transition: background-color 120ms ease;
+  }
+  .brdc-key:hover, .brdc-key:active { background: var(--brdc-surface-2); }
+  .brdc-amount { font-variant-numeric: tabular-nums; letter-spacing: -0.02em; font-weight: 700; }
+  .brdc-amount .brdc-dim { color: var(--brdc-muted); }
+  .brdc-nav-item {
+    display: flex; flex-direction: column; align-items: center; gap: 0.125rem;
+    min-width: 3.5rem; min-height: 3rem; justify-content: center; border-radius: 1rem;
+    color: var(--brdc-muted); font-size: 0.6875rem; font-weight: 600; cursor: pointer;
+  }
+  .brdc-nav-item[aria-current="page"] { color: var(--brdc-text); }
+  .brdc-nav-item[aria-current="page"] .brdc-nav-dot { background: var(--brdc-yellow); }
+  .brdc-nav-dot { width: 0.25rem; height: 0.25rem; border-radius: 9999px; background: transparent; }
+}
+
+:where(a, button, [tabindex]):focus-visible {
+  outline: 2px solid var(--brdc-yellow);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
