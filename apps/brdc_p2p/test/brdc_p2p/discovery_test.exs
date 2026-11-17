@@ -157,6 +157,13 @@ defmodule BrdcP2p.DiscoveryTest do
     defp cfg(n),
       do: %{seed: seed(n), chain_id: @chain, genesis_hash: @genesis, validators: &vals/0}
 
+    # o processo é ligado ao teste e pode já ter morrido quando o on_exit roda
+    defp stop_quietly(pid) do
+      Listener.stop(pid)
+    catch
+      :exit, _ -> :ok
+    end
+
     # sobe o validador `n` com um livro próprio (num Agent) e o serviço de descoberta
     defp node(n, records) do
       {:ok, book} =
@@ -171,7 +178,7 @@ defmodule BrdcP2p.DiscoveryTest do
       end
 
       {:ok, l} = Listener.start_link(config: cfg(n), guard: guard, handler: handler)
-      on_exit(fn -> if Process.alive?(l), do: Listener.stop(l) end)
+      on_exit(fn -> stop_quietly(l) end)
       {Listener.port(l), book}
     end
 

@@ -31,3 +31,10 @@ erl_crash.dump
 # Python (gerador de diagramas)
 __pycache__/
 *.pyc
+
+# Redes de teste locais (chaves e genesis gerados por mix brdc.keygen/brdc.genesis)
+/net/
+/dev-net/
+
+# Diretórios temporários dos testes (ExUnit tmp_dir)
+tmp/

@@ -42,7 +42,7 @@ defmodule BrdcP2p.AddressRecord do
   def sign(chain_id, seed, host, port, seq) do
     validator = Ed25519.public_key(seed)
 
-    with :ok <- check_host(host), :ok <- check_port(port) do
+    with :ok <- check_endpoint(host, port) do
       sig = Ed25519.sign(doc(chain_id, validator, host, port, seq), seed)
 
       {:ok,
@@ -91,6 +91,12 @@ defmodule BrdcP2p.AddressRecord do
       _ ->
         {:error, :malformed}
     end
+  end
+
+  @doc "Host e porta são válidos para um registro?"
+  @spec check_endpoint(term(), term()) :: :ok | {:error, :invalid_host | :invalid_port}
+  def check_endpoint(host, port) do
+    with :ok <- check_host(host), do: check_port(port)
   end
 
   # nome de máquina ou IP: letras, dígitos, ponto, hífen e dois-pontos (IPv6); nada de espaço ou barra

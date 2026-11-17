@@ -40,5 +40,5 @@ Cada validador assina um **registro de endereço** (`host:port`, com número de 
 ## Limites honestos
 - **Sem expiração** de registro: um validador que desaparece continua no livro até sair do conjunto.
 - O livro fica **em memória**; o nó o reconstrói ao reconectar.
-- A **lista de partida** (os primeiros pares) vem de configuração; fica para `keygen`/`genesis`.
-- Não há ainda a **porta pública** nem o roteiro de dois computadores (**planejados**).
+- A **lista de partida** (os primeiros pares) vem da gênese ([Fluxo 07](07-keygen-and-genesis.md)).
+- A porta pública é o [Fluxo 08](08-public-port.md); o roteiro de dois computadores fica para a Fase 7.

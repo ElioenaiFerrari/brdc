@@ -39,5 +39,5 @@ A porta de pares aceita só validadores, mas qualquer um pode tentar conectar. E
 
 ## Limites honestos
 - Não é defesa completa contra DDoS (isso se faz também na rede, fora do nó).
-- A porta **pública** (clientes) ainda não existe; terá os mesmos mecanismos.
+- A porta **pública** (clientes) usa os mesmos mecanismos: [Fluxo 08](08-public-port.md).
 - Registros de endereço e descoberta: [Fluxo 06](06-peer-discovery.md).

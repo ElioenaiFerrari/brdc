@@ -56,3 +56,41 @@ def peer_discovery():
     d.text(60, 428, "Registro antigo reenviado é recusado (seq menor ou igual); quem saiu do conjunto é esquecido.", 11, MUTED)
     d.legend([(LINK, "pergunta e resposta", False), (MUTED, "verificação", False), (BOTO, "resultado", False)])
     return d
+
+
+def keygen_and_genesis():
+    d = D("keygen-and-genesis", 1100, 560, "Como uma rede de teste nasce", "Cada validador gera a própria chave; a gênese junta só as chaves públicas e fixa as regras da rede", "FLUXO 07")
+    d.arrow([(280, 168), (420, 168)], "link", label="mix brdc.keygen", at=(350, 150))
+    d.arrow([(640, 168), (780, 168)], "default", label="só a parte pública", at=(710, 150))
+    d.arrow([(890, 206), (890, 290)], "default", label="mix brdc.genesis", at=(890, 250))
+    d.arrow([(780, 328), (640, 328)], "default", label="hash da gênese", at=(710, 310))
+    d.arrow([(420, 328), (280, 328)], "boto", label="hello confere", at=(350, 310))
+    d.node(60, 130, 220, 76, "Cada operador", "um por validador e emissor", "onca", "na própria máquina")
+    d.node(420, 130, 220, 76, "Chave privada", "nome.seed · permissão 0600", "focal", "nunca sai", sub2="não sobrescreve")
+    d.node(780, 130, 220, 76, "Chave pública", "nome.pub", "plain", "pode circular")
+    d.node(780, 290, 220, 76, "genesis.json", "validadores, emissores, taxas", "link", "sem segredo", sub2="e lista de partida")
+    d.node(420, 290, 220, 76, "Impressão digital", "hash determinístico", "store", "32 bytes")
+    d.node(60, 290, 220, 76, "Nós com a mesma gênese", "se aceitam no hello", "boto", "rede única")
+    d.text(60, 410, "Gênese diferente = hash diferente = nós se recusam, mesmo com chaves do mesmo conjunto.", 11, INK, weight=600)
+    d.text(60, 428, "A ordem dos validadores entra no hash porque define o rodízio de proponentes.", 11, MUTED)
+    d.legend([(LINK, "geração", False), (MUTED, "dados", False), (BOTO, "conferência", False)])
+    return d
+
+
+def public_port():
+    d = D("public-port", 1100, 560, "Porta pública para carteira e explorador", "Poucos tipos de pedido, tamanho e taxa limitados; quem pergunta reverifica tudo", "FLUXO 08")
+    d.arrow([(280, 168), (420, 168)], "link", label="IP admitido?", at=(350, 150))
+    d.arrow([(640, 168), (780, 168)], "default", label="tipo na lista?", at=(710, 150))
+    d.arrow([(890, 206), (890, 290)], "default", label="tamanho e taxa", at=(890, 250))
+    d.arrow([(780, 328), (640, 328)], "default", label="handler do nó", at=(710, 310))
+    d.arrow([(420, 328), (280, 328)], "boto", label="resposta ou erro", at=(350, 310))
+    d.node(60, 130, 220, 76, "Cliente", "carteira ou explorador", "onca", "sem identidade")
+    d.node(420, 130, 220, 76, "Guard", "teto por IP e total", "link", "banimento")
+    d.node(780, 130, 220, 76, "4 tipos de pedido", "status, enviar tx, bloco, conta", "plain", "lista fixa")
+    d.node(780, 290, 220, 76, "Limites", "por tipo e por conexão", "focal", "tamanho · taxa · prazo")
+    d.node(420, 290, 220, 76, "Handler isolado", "falha vira erro genérico", "store", "o nó decide")
+    d.node(60, 290, 220, 76, "Cliente reverifica", "assinaturas e certificado", "boto", "não confia no nó")
+    d.text(60, 410, "Tipo desconhecido, corpo acima do máximo ou excesso de taxa derrubam a conexão.", 11, INK, weight=600)
+    d.text(60, 428, "Não é cifrada nem autenticada: por isso o cliente nunca aceita nada sem conferir a prova.", 11, MUTED)
+    d.legend([(LINK, "admissão", False), (MUTED, "validação", False), (BOTO, "resposta", False)])
+    return d

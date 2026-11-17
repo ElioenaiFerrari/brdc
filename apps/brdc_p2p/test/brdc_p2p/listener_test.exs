@@ -42,7 +42,7 @@ defmodule BrdcP2p.ListenerTest do
         Keyword.merge([config: cfg(1, vals), guard: guard, handler: &echo/1], listener_opts)
       )
 
-    on_exit(fn -> if Process.alive?(l), do: Listener.stop(l) end)
+    on_exit(fn -> stop_quietly(l) end)
     {guard, Listener.port(l), vals}
   end
 
@@ -52,6 +52,13 @@ defmodule BrdcP2p.ListenerTest do
          {:ok, "ready"} <- Channel.recv_frame(conn, 1_500) do
       {:ok, conn}
     end
+  end
+
+  # o processo é ligado ao teste e pode já ter morrido quando o on_exit roda
+  defp stop_quietly(pid) do
+    Listener.stop(pid)
+  catch
+    :exit, _ -> :ok
   end
 
   defp wait_until(fun, tries \\ 40) do

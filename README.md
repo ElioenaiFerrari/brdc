@@ -2,7 +2,7 @@
 
 Uma **stablecoin brasileira** (1 BRDC = 1 BRL) numa blockchain própria em **Elixir**, com **contratos nativos** de propriedade, credenciais (CNH, identificação, casamento, divórcio…) e contratos entre partes, uma rede **P2P** de validadores e uma **carteira web não custodial**. Projeto de estudo: sem auditoria, sem validade jurídica, sem integração bancária real.
 
-> **Estado atual: Fase 4 em andamento (canal TLS 1.3 mútuo, limites, banimento e descoberta de pares prontos), Fase 3 com o motor de consenso pronto (BFT, simulado com falhas), Fase 2 pronta (ledger em memória: transferência, mint e burn por M-de-N, atestado de reserva, taxas, blocos atômicos).** A Fase 1 também. `brdc_crypto` tem hash etiquetado, Ed25519, BIP-39 com passphrase, SLIP-10, endereços `brdc1…` e codificação determinística, com vetores oficiais conferidos também em JavaScript. **Ainda não há rede P2P, nó rodando nem carteira web**: a moeda e o consenso existem como bibliotecas testadas em memória e por simulação, e o resto chega nas fases seguintes ([roteiro](docs/PHASES.md)).
+> **Estado atual: Fase 4 pronta (canal TLS 1.3 mútuo, limites, banimento, descoberta de pares, porta pública, `keygen` e gênese), Fase 3 com o motor de consenso pronto (BFT, simulado com falhas), Fase 2 pronta (ledger em memória: transferência, mint e burn por M-de-N, atestado de reserva, taxas, blocos atômicos).** A Fase 1 também. `brdc_crypto` tem hash etiquetado, Ed25519, BIP-39 com passphrase, SLIP-10, endereços `brdc1…` e codificação determinística, com vetores oficiais conferidos também em JavaScript. **Ainda não há rede P2P, nó rodando nem carteira web**: a moeda e o consenso existem como bibliotecas testadas em memória e por simulação, e o resto chega nas fases seguintes ([roteiro](docs/PHASES.md)).
 
 ![Arquitetura da BRDC: a carteira web assina no navegador e envia a transação ao nó, que a coloca no mempool do consenso BFT; o ledger aplica o bloco decidido e os validadores conversam por sessões Noise](docs/diagrams/architecture-overview.png)
 
@@ -33,6 +33,14 @@ make setup        # baixa as dependências
 make check        # formato, credo e testes
 make docs-check   # confere a documentação
 make              # lista tudo
+```
+
+Para criar uma rede de teste local (as chaves ficam em `net/`, ignorada pelo git; detalhes no [Fluxo 07](docs/flows/07-keygen-and-genesis.md)):
+
+```
+mix brdc.keygen v1 && mix brdc.keygen v2 && mix brdc.keygen v3   # validadores
+mix brdc.keygen i1 && mix brdc.keygen i2                         # emissores
+mix brdc.genesis --chain-id brdc-devnet --validators v1,v2,v3 --issuers i1,i2 --threshold 2
 ```
 
 Requisitos: Elixir 1.20+ (OTP 29), Node 24 (carteira, Fase 6), Brave (só para gerar os diagramas).

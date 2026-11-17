@@ -20,9 +20,11 @@ Um fluxo por funcionalidade (texto e diagrama) em `docs/flows/`, à medida que c
 - [01 — Da frase ao endereço](flows/01-phrase-to-address.md) (Fase 1)
 - [02 — Como um bloco é executado](flows/02-block-execution.md) (Fase 2)
 - [03 — Uma rodada de consenso](flows/03-consensus-round.md) (Fase 3)
-- [04 — Como dois validadores se conectam](flows/04-secure-channel.md) (Fase 4, em andamento)
+- [04 — Como dois validadores se conectam](flows/04-secure-channel.md) (Fase 4)
 - [05 — Limites e banimento na porta de pares](flows/05-limits-and-bans.md) (Fase 4, em andamento)
-- [06 — Como um validador descobre os outros](flows/06-peer-discovery.md) (Fase 4, em andamento)
+- [06 — Como um validador descobre os outros](flows/06-peer-discovery.md) (Fase 4)
+- [07 — Como uma rede de teste nasce (keygen e gênese)](flows/07-keygen-and-genesis.md) (Fase 4)
+- [08 — Porta pública para carteira e explorador](flows/08-public-port.md) (Fase 4)
 
 A [arquitetura](ARCHITECTURE.md) dá a visão geral.
 
