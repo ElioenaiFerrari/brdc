@@ -37,3 +37,22 @@ def limits_and_bans():
     d.text(60, 428, "Loopback nunca é banido por IP: todos os nós de uma máquina de testes dividem o endereço.", 11, MUTED)
     d.legend([(LINK, "admissão", False), (MUTED, "sessão", False), (BOTO, "punição", False)])
     return d
+
+
+def peer_discovery():
+    d = D("peer-discovery", 1100, 560, "Como um validador descobre os outros", "Cada endereço é assinado pelo dono; quem repassa não pode falsificar nem rebaixar um registro", "FLUXO 06")
+    d.arrow([(280, 168), (420, 168)], "link", label="get_addrs", at=(350, 150))
+    d.arrow([(640, 168), (780, 168)], "default", label="addrs (até 64)", at=(710, 150))
+    d.arrow([(890, 206), (890, 290)], "default", label="confere cada um", at=(890, 250))
+    d.arrow([(780, 328), (640, 328)], "default", label="seq maior vence", at=(710, 310))
+    d.arrow([(420, 328), (280, 328)], "boto", label="disca pelo endereço", at=(350, 310))
+    d.node(60, 130, 220, 76, "Validador A", "conhece só o B", "onca", "pergunta")
+    d.node(420, 130, 220, 76, "Validador B", "livro de endereços", "link", "responde", sub2="sabe de A, B e C")
+    d.node(780, 130, 220, 76, "Resposta", "registros assinados", "plain", "dados")
+    d.node(780, 290, 220, 76, "Confere", "rede, assinatura, conjunto", "focal", "descarta o falso")
+    d.node(420, 290, 220, 76, "Livro de A", "address_book.ex", "store", "um por validador")
+    d.node(60, 290, 220, 76, "Validador C", "descoberto por A", "boto", "conexão TLS")
+    d.text(60, 410, "O registro do C foi assinado pelo C: o B só o repassa e não pode alterar host, porta ou seq.", 11, INK, weight=600)
+    d.text(60, 428, "Registro antigo reenviado é recusado (seq menor ou igual); quem saiu do conjunto é esquecido.", 11, MUTED)
+    d.legend([(LINK, "pergunta e resposta", False), (MUTED, "verificação", False), (BOTO, "resultado", False)])
+    return d

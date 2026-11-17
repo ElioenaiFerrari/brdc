@@ -40,4 +40,4 @@ A porta de pares aceita só validadores, mas qualquer um pode tentar conectar. E
 ## Limites honestos
 - Não é defesa completa contra DDoS (isso se faz também na rede, fora do nó).
 - A porta **pública** (clientes) ainda não existe; terá os mesmos mecanismos.
-- Registros de endereço assinados e descoberta ainda estão **planejados**.
+- Registros de endereço e descoberta: [Fluxo 06](06-peer-discovery.md).

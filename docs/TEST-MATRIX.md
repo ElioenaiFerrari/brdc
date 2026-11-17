@@ -45,7 +45,7 @@ Invariante → teste que o cobre. Linhas *planejadas* ainda não têm teste: ent
 | Equivocação vira evidência; `inspect` não mostra a chave | `consensus_test.exs` (`motor isolado`) |
 | Certificado: sem quórum, voto repetido, estranho, assinatura ruim, bloco diferente e outra rede falham | `consensus_test.exs` (`certificado`) |
 
-## Fase 4 (em andamento: canal seguro, limites e banimento prontos)
+## Fase 4 (em andamento: canal seguro, limites, banimento e descoberta prontos)
 | Invariante | Teste |
 |---|---|
 | Dois validadores do conjunto conversam e cada um vê a chave do outro | `brdc_p2p/test/brdc_p2p/channel_test.exs` |
@@ -60,13 +60,18 @@ Invariante → teste que o cobre. Linhas *planejadas* ainda não têm teste: ent
 | Loopback nunca é banido por IP, mas a chave é; intruso repetido em loopback não derruba ninguém | `limits_test.exs`, `listener_test.exs` |
 | Balde de fichas: rajada, recusa, reposição; nunca passa da taxa (propriedade); excesso vira ponto | `limits_test.exs`, `listener_test.exs` |
 
-*Falta da Fase 4:* registros de endereço assinados, descoberta, porta pública, `keygen`/`genesis` e o roteiro de dois computadores.
+| Registro de endereço: assinado pelo dono; qualquer campo adulterado invalida; mudar um byte nunca gera outro registro válido (propriedade); host e porta inválidos recusados | `discovery_test.exs` |
+| Livro: `seq` maior vence, antigo é recusado, estranho ao conjunto, rede errada e impostor recusados, rotação esquece quem saiu | `discovery_test.exs` |
+| Descoberta: registro falso é descartado e o bom guardado; mensagem malformada, lista grande e lixo recusados sem exceção | `discovery_test.exs` |
+| **De ponta a ponta:** A só conhece B, descobre C por B e disca para C pelo endereço assinado | `discovery_test.exs` (`de ponta a ponta`) |
+
+*Falta da Fase 4:* porta pública, `keygen`/`genesis` e o roteiro de dois computadores.
 
 ## Planejado por fase
 | Fase | Invariantes (a testar) |
 |---|---|
 | 3 (resto) | Sem blocos vazios (no nó); rotação do conjunto por mais de 2/3; WAL e recuperação |
-| 4 (resto) | Registros de endereço assinados e atualizados; descoberta; porta pública com limites |
+| 4 (resto) | Porta pública com limites; `keygen`/`genesis`; roteiro de dois computadores |
 | 5 | Bens: transferência só pelo dono, escrow e veto; credenciais: janela de contestação, validade, veto, revogação, privada vs pública; casamento por cônjuge e divórcio revoga casamento; contratos: só as transições do modelo, valores em escrow conservados |
 | 6 | Carteira: frase e passphrase nunca saem do navegador; cofre cifrado; assinatura no navegador aceita pelo nó; CSP sem scripts de terceiros |
 | 7 | Explorador mostra quem assinou cada bloco; roteiro de dois computadores validado |

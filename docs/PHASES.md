@@ -8,7 +8,7 @@ Cada fase só começa com a anterior com testes passando **e documentada**. Ao f
 | 1 | Criptografia e carteira: hash etiquetado, Ed25519, BIP-39, SLIP-10, passphrase, endereço, assinatura; vetores oficiais iguais em Elixir e JS | `brdc_crypto` | **pronta** |
 | 2 | Livro-razão e a moeda: contas, transação, bloco, estado, transferência, taxa, reservas e mint/burn por emissores M-de-N, invariantes por propriedade | `brdc_ledger` | **pronta** (persistência em disco fica com o ADR-0012) |
 | 3 | Consenso BFT: motor sem I/O, rodadas, votos, commit, sem blocos vazios, rotação do conjunto, simulações de falha | `brdc_consensus` | **motor pronto** (rotação do conjunto e WAL com o nó) |
-| 4 | P2P: TLS 1.3 mútuo, portas, limites, registros de endereço, descoberta, genesis, roteiro de dois computadores | `brdc_p2p` | **canal seguro, limites e banimento prontos** (endereços, descoberta, porta pública e roteiro de dois computadores pendentes) |
+| 4 | P2P: TLS 1.3 mútuo, portas, limites, registros de endereço, descoberta, genesis, roteiro de dois computadores | `brdc_p2p` | **canal seguro, limites, banimento e descoberta prontos** (porta pública, `keygen`/`genesis` e roteiro de dois computadores pendentes) |
 | 5 | Contratos nativos: bens e propriedade, credenciais (CNH, identificação, casamento, divórcio), contratos entre partes | `brdc_ledger` | planejado |
 | 6 | Carteira web: LiveView + criptografia no navegador, cofre cifrado, enviar e receber, assinar contratos | `brdc_web` | planejado |
 | 7 | Explorador, ferramentas e testnet: explorador, mix tasks, simuladores, revisão de segurança, runbook | `brdc_node`, `brdc_web` | planejado |
