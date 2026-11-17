@@ -69,6 +69,10 @@ defmodule BrdcNode.Node do
           {:ok, <<_::256>>} | {:error, atom()}
   def propose(node, kind, fields), do: GenServer.call(node, {:propose, kind, fields})
 
+  @doc "Credenciais dos tipos cujo órgão inclui a chave pública (para propor veto e revogação)."
+  @spec organ_credentials(GenServer.server(), <<_::256>>) :: [map()]
+  def organ_credentials(node, pub), do: GenServer.call(node, {:organ_credentials, pub})
+
   @doc "Classes de bens cujo órgão inclui a chave pública."
   @spec classes_for(GenServer.server(), <<_::256>>) :: [map()]
   def classes_for(node, pub), do: GenServer.call(node, {:classes_for, pub})
@@ -190,6 +194,17 @@ defmodule BrdcNode.Node do
       {:ok, store, id} -> {:reply, {:ok, id}, %{s | proposals: store}}
       {:error, _} = err -> {:reply, err, s}
     end
+  end
+
+  def handle_call({:organ_credentials, pub}, _from, s) do
+    st = s.state
+
+    mine =
+      for {id, c} <- Enum.sort(st.credentials), pub in st.cred_types[c.type].organ do
+        Map.put(c, :id, id)
+      end
+
+    {:reply, mine, s}
   end
 
   def handle_call({:classes_for, pub}, _from, s) do

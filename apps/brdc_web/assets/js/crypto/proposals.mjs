@@ -1,7 +1,7 @@
 // Assinatura coletiva dos órgãos no navegador (ADR-0019/0022). Cada membro assina o DOCUMENTO de uma emissão
 // de credencial; com M aprovações, qualquer membro monta a transação. O documento é calculado aqui com a MESMA
 // regra do Elixir (vetores conferem); o nó o recalcula e não confia no que recebe.
-import { concat, fixed, stringField, bytesField, u32, u8 } from "./bytes.mjs";
+import { concat, fixed, stringField, bytesField, u32, u64, u8 } from "./bytes.mjs";
 import { tagged } from "./hash.mjs";
 import { decodeAddress } from "./wallet.mjs";
 
@@ -39,7 +39,7 @@ export function issuePayload({ type, id, subjectAddress, data, ref = "", approva
 }
 
 /** Números dos tipos de proposta na porta pública (iguais aos de `BrdcNode.Proposals`). */
-export const KIND = { credential_issue: 1, asset_register: 2, asset_veto: 3, lien_add: 4, lien_remove: 5 };
+export const KIND = { credential_issue: 1, asset_register: 2, asset_veto: 3, lien_add: 4, lien_remove: 5, cred_veto: 6, cred_revoke: 7 };
 
 /** Corpo do pedido de proposta ao nó: subtipo 1, número do tipo e os campos do tipo. */
 export const proposalBody = (kind, fields) => concat(u8(1), u8(KIND[kind]), fields);
@@ -80,3 +80,18 @@ export function commitment(salt, dataBytes) {
   return tagged("brdc/cred/commitment", concat(salt, dataBytes));
 }
 
+export const KIND_CRED_VETO = 17;
+export const KIND_CRED_REVOKE = 19;
+
+const cred = (op, body) => tagged(`brdc/cred/${op}`, body);
+const approvalsList = (list) => concat(u32(list.length), ...list.map((a) => bytesField(a)));
+
+/** Veto de credencial pendente: documento amarra a rede, o id e o instante da emissão. */
+export const credVetoDoc = ({ chainId, id, issuedAt }) => cred("veto", concat(stringField(chainId), stringField(id), u64(BigInt(issuedAt))));
+export const credRevokeDoc = ({ chainId, id, reason }) => cred("revoke", concat(stringField(chainId), stringField(id), stringField(reason)));
+
+export const credVetoPayload = ({ id, approvals }) => concat(stringField(id), approvalsList(approvals));
+export const credRevokePayload = ({ id, reason, approvals }) => concat(stringField(id), stringField(reason), approvalsList(approvals));
+
+export const credVetoProposal = ({ id }) => proposalBody("cred_veto", stringField(id));
+export const credRevokeProposal = ({ id, reason }) => proposalBody("cred_revoke", concat(stringField(id), stringField(reason)));

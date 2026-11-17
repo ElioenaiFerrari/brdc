@@ -8,6 +8,7 @@ import { hex, unhex, utf8, fromUtf8 } from "./crypto/bytes.mjs";
 import { decodeAddress } from "./crypto/wallet.mjs";
 import {
   issueDoc, approve, issuePayload, proposalFields, describeIssue, idPayload, buildTx, commitment, KIND_ISSUE, KIND_CONTEST, KIND_ACTIVATE,
+  credVetoDoc, credRevokeDoc, credVetoPayload, credRevokePayload, credVetoProposal, credRevokeProposal, KIND_CRED_VETO, KIND_CRED_REVOKE,
 } from "./crypto/proposals.mjs";
 import {
   registerDoc, vetoDoc, lienAddDoc, lienRemoveDoc, registerPayload, vetoPayload, lienAddPayload, lienRemovePayload,
@@ -223,6 +224,8 @@ const ACTIONS = {
   asset_veto: "Vetar venda de bem",
   lien_add: "Adicionar gravame",
   lien_remove: "Remover gravame",
+  cred_veto: "Vetar credencial pendente",
+  cred_revoke: "Revogar credencial",
 };
 
 // campos de cada ação: [nome, rótulo, tipo ("text" | "type" | "class" | "asset")]
@@ -232,12 +235,14 @@ const FORMS = {
   asset_veto: [["asset", "Bem com venda em andamento", "asset"]],
   lien_add: [["asset", "Bem", "asset"], ["lien", "Id do gravame (ex.: hipoteca-1)", "text"], ["ref", "Referência (contrato, processo…)", "text"]],
   lien_remove: [["asset", "Bem", "asset"], ["lien", "Id do gravame a remover", "text"]],
+  cred_veto: [["cred", "Credencial pendente", "cred"]],
+  cred_revoke: [["cred", "Credencial", "cred"], ["reason", "Motivo da revogação", "text"]],
 };
 
 export const Organ = {
   ...Base,
   mounted() {
-    this.reg = { types: [], classes: [], organ_assets: [], proposals: [], public_key: "", time: "0" };
+    this.reg = { types: [], classes: [], organ_assets: [], organ_credentials: [], proposals: [], public_key: "", time: "0" };
     this.draft = null;
     this.fields = {};
     this.on("new", () => this.openNew());
@@ -246,7 +251,7 @@ export const Organ = {
     this.on("confirm", () => this.draft?.run());
     this.q("[data-role='action']").addEventListener("change", () => this.drawForm());
     this.handleEvent("registry", (r) => {
-      const sig = JSON.stringify([r.types, r.classes, r.organ_assets, r.proposals, r.public_key]);
+      const sig = JSON.stringify([r.types, r.classes, r.organ_assets, r.organ_credentials, r.proposals, r.public_key, this.pendingOpen(r)]);
       this.reg = r;
       this.el.hidden = r.types.length === 0 && r.classes.length === 0;
       if (sig === this.sig) return;
@@ -265,6 +270,13 @@ export const Organ = {
   },
   assetOf(id) {
     return this.reg.organ_assets.find((a) => a.id === id);
+  },
+  credOf(id) {
+    return this.reg.organ_credentials.find((c) => c.id === id);
+  },
+  // credenciais pendentes ainda dentro da janela (muda com o relógio, então entra na assinatura da tela)
+  pendingOpen(r) {
+    return (r.organ_credentials ?? []).filter((c) => c.status === "pending" && BigInt(r.time) < BigInt(c.active_at)).map((c) => c.id);
   },
   classOf(id) {
     return this.reg.classes.find((c) => c.id === id);
@@ -332,6 +344,26 @@ export const Organ = {
           tx: (approvals) => ({ kind: KIND_LIEN_ADD, feeKey: null, payload: lienAddPayload({ assetId: f.asset, lien: f.lien, ref: f.ref, approvals }) }),
         };
       }
+      case "cred_veto": {
+        const c = this.credOf(f.id);
+        if (!c || c.status !== "pending") return null;
+        return {
+          title: `Vetar credencial ${f.id}`,
+          lines: [`Vetar a credencial "${label(c.type)}" (${f.id}) emitida para ${c.subject}`, "O veto descarta a credencial pendente; o id não pode ser reaproveitado. Só vale dentro da janela de contestação.", `Precisa de ${p.threshold} assinaturas do órgão do tipo.`],
+          doc: credVetoDoc({ chainId, id: f.id, issuedAt: c.issued_at }),
+          tx: (approvals) => ({ kind: KIND_CRED_VETO, feeKey: null, payload: credVetoPayload({ id: f.id, approvals }) }),
+        };
+      }
+      case "cred_revoke": {
+        const c = this.credOf(f.id);
+        if (!c || (c.status !== "pending" && c.status !== "active")) return null;
+        return {
+          title: `Revogar credencial ${f.id}`,
+          lines: [`Revogar a credencial "${label(c.type)}" (${f.id}) de ${c.subject}`, `Motivo: ${f.reason}`, "A revogação é definitiva e fica registrada na rede.", `Precisa de ${p.threshold} assinaturas do órgão do tipo.`],
+          doc: credRevokeDoc({ chainId, id: f.id, reason: f.reason }),
+          tx: (approvals) => ({ kind: KIND_CRED_REVOKE, feeKey: "credential_fee", payload: credRevokePayload({ id: f.id, reason: f.reason, approvals }) }),
+        };
+      }
       case "lien_remove": {
         const a = this.assetOf(f.asset);
         const i = a ? a.lien_ids.indexOf(f.lien) : -1;
@@ -392,6 +424,8 @@ export const Organ = {
     if (this.reg.organ_assets.some((x) => x.deal === "accepted")) a.push("asset_veto");
     if (this.reg.organ_assets.length) a.push("lien_add");
     if (this.reg.organ_assets.some((x) => x.lien_ids.length)) a.push("lien_remove");
+    if (this.pendingOpen(this.reg).length) a.push("cred_veto");
+    if (this.reg.organ_credentials.some((c) => c.status === "pending" || c.status === "active")) a.push("cred_revoke");
     return a;
   },
 
@@ -425,6 +459,9 @@ export const Organ = {
         input = el("select", "brdc-input mt-1");
         const items = type === "type" ? this.reg.types.map((t) => [t.id, label(t.id)])
           : type === "class" ? this.reg.classes.map((c) => [c.id, c.id])
+          : type === "cred" ? this.reg.organ_credentials
+              .filter((c) => (kind === "cred_veto" ? this.pendingOpen(this.reg).includes(c.id) : c.status === "pending" || c.status === "active"))
+              .map((c) => [c.id, `${c.id} (${label(c.type)}, ${c.status === "pending" ? "pendente" : "ativa"})`])
           : this.reg.organ_assets
               .filter((a) => (kind === "asset_veto" ? a.deal === "accepted" : kind === "lien_remove" ? a.lien_ids.length > 0 : true))
               .map((a) => [a.id, `${a.id} (${a.class})`]);
@@ -464,6 +501,11 @@ export const Organ = {
       if (!v("asset") || !v("meta")) return this.error("Informe o id e a descrição do bem.");
       if (!needAddress(v("owner"), "do dono")) return;
       body = registerProposal({ cls: v("class"), assetId: v("asset"), ownerAddress: v("owner"), meta: utf8(this.fields.meta.value) });
+    } else if (kind === "cred_veto") {
+      body = credVetoProposal({ id: v("cred") });
+    } else if (kind === "cred_revoke") {
+      if (!v("reason")) return this.error("Informe o motivo da revogação.");
+      body = credRevokeProposal({ id: v("cred"), reason: v("reason") });
     } else if (kind === "asset_veto") {
       body = vetoProposal({ assetId: v("asset") });
     } else if (kind === "lien_add") {

@@ -145,6 +145,12 @@ Invariante → teste que o cobre. Linhas *planejadas* ainda não têm teste: ent
 | Oferta, aceite, cancelamento e finalização no JS têm cargas **iguais** às do Elixir | `assets/js/crypto/assets.test.mjs` + `vectors/tx.json` |
 | Ciclo pela rede: classe, registro, oferta, escrow, finalização depois da janela (relógio) | `apps/brdc_dev/test/brdc_dev/devnet_e2e_test.exs` |
 
+## Veto e revogação de credencial (pronto)
+| Invariante | Teste |
+|---|---|
+| Veto e revogação no JS: documento, aprovações e carga **iguais** aos do Elixir | `assets/js/crypto/proposals.test.mjs` + `vectors/tx.json` |
+| Veto só com credencial pendente e dentro da janela; a proposta caduca ao vencer; o motivo da revogação faz parte do documento | `apps/brdc_node/test/brdc_node/proposals_test.exs` |
+
 ## Ações do órgão sobre bens (pronto)
 | Invariante | Teste |
 |---|---|

@@ -3,7 +3,8 @@ defmodule BrdcNode.Proposals do
   Propostas de assinatura coletiva (Fase 6/7, ADR-0024): um membro de um órgão propõe uma ação, os outros
   assinam, e com M aprovações qualquer um monta e envia a transação.
 
-  Tipos (`kind`): `:credential_issue` · `:asset_register` · `:asset_veto` · `:lien_add` · `:lien_remove`.
+  Tipos (`kind`): `:credential_issue` · `:asset_register` · `:asset_veto` · `:lien_add` · `:lien_remove` ·
+  `:cred_veto` · `:cred_revoke`.
 
   **Puro**: `(armazém, estado do ledger, …) → armazém'`. O nó **não confia no que recebe**: a proposta traz só
   os **campos**; o documento a assinar e o órgão competente são **recalculados aqui** do estado do ledger
@@ -26,10 +27,19 @@ defmodule BrdcNode.Proposals do
       {2, [:class, :asset, :owner, :meta], [:string, :string, {:fixed, 32}, :bytes]},
     asset_veto: {3, [:asset], [:string]},
     lien_add: {4, [:asset, :lien, :ref], [:string, :string, :string]},
-    lien_remove: {5, [:asset, :lien], [:string, :string]}
+    lien_remove: {5, [:asset, :lien], [:string, :string]},
+    cred_veto: {6, [:id], [:string]},
+    cred_revoke: {7, [:id, :reason], [:string, :string]}
   }
 
-  @type kind :: :credential_issue | :asset_register | :asset_veto | :lien_add | :lien_remove
+  @type kind ::
+          :credential_issue
+          | :asset_register
+          | :asset_veto
+          | :lien_add
+          | :lien_remove
+          | :cred_veto
+          | :cred_revoke
   @type fields :: map()
   @type proposal :: %{id: <<_::256>>, kind: kind(), fields: fields(), approvals: [binary()]}
   @type store :: %{<<_::256>> => proposal()}
@@ -230,6 +240,26 @@ defmodule BrdcNode.Proposals do
          doc: doc,
          key: {:lien_remove, f.asset, f.lien}
        }}
+    end
+  end
+
+  defp resolve(s, :cred_veto, f) do
+    with {:ok, cred} <- fetch(s.credentials, f.id, :no_credential),
+         :ok <- check(cred.status == :pending, :bad_status),
+         :ok <- check(s.time < cred.active_at, :window_closed) do
+      type = Map.fetch!(s.cred_types, cred.type)
+      doc = Credentials.veto_doc(s.params.chain_id, f.id, cred.issued_at)
+      {:ok, %{organ: type.organ, threshold: type.threshold, doc: doc, key: {:cred_veto, f.id}}}
+    end
+  end
+
+  defp resolve(s, :cred_revoke, f) do
+    with {:ok, cred} <- fetch(s.credentials, f.id, :no_credential),
+         :ok <- check(cred.status in [:pending, :active], :bad_status),
+         :ok <- check(byte_size(f.reason) in 1..128, :bad_id) do
+      type = Map.fetch!(s.cred_types, cred.type)
+      doc = Credentials.revoke_doc(s.params.chain_id, f.id, f.reason)
+      {:ok, %{organ: type.organ, threshold: type.threshold, doc: doc, key: {:cred_revoke, f.id}}}
     end
   end
 

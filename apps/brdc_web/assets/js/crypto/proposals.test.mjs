@@ -2,7 +2,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { issueDoc, approve, issuePayload, proposalFields, describeIssue } from "./proposals.mjs";
+import { issueDoc, approve, issuePayload, proposalFields, describeIssue, credVetoDoc, credRevokeDoc, credVetoPayload, credRevokePayload } from "./proposals.mjs";
 import { deriveAccount } from "./wallet.mjs";
 import { hex, unhex } from "./bytes.mjs";
 
@@ -52,4 +52,18 @@ test("o texto que o membro lê traz os campos por extenso", () => {
   const priv = describeIssue({ typeLabel: "Casamento", id: "c", subjectAddress: "brdc1abc", dataText: "", privacy: "private", ref: "cas-a", threshold: 2 }).join(" | ");
   assert.match(priv, /só o compromisso/);
   assert.match(priv, /Referente à credencial cas-a/);
+});
+
+test("veto e revogação de credencial: documento, aprovações e carga = Elixir", async () => {
+  const m1 = await deriveAccount(vec.mnemonic, "m1");
+  const m2 = await deriveAccount(vec.mnemonic, "m2");
+  assert.equal(vec.cred_ops.length, 2);
+  for (const o of vec.cred_ops) {
+    const doc = o.op === "veto" ? credVetoDoc({ chainId: vec.chain_id, id: o.id, issuedAt: o.issued_at }) : credRevokeDoc({ chainId: vec.chain_id, id: o.id, reason: o.reason });
+    assert.equal(hex(doc), o.doc, `documento ${o.op}`);
+    const aps = [await approve(m1, doc), await approve(m2, doc)];
+    assert.deepEqual(aps.map(hex), o.approvals, `aprovações ${o.op}`);
+    const payload = o.op === "veto" ? credVetoPayload({ id: o.id, approvals: aps }) : credRevokePayload({ id: o.id, reason: o.reason, approvals: aps });
+    assert.equal(hex(payload), o.payload, `carga ${o.op}`);
+  }
 });

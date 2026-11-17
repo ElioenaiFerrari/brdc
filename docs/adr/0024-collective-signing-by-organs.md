@@ -6,7 +6,7 @@
 Emitir uma credencial exige M assinaturas de membros de um órgão, cada um na **própria** carteira, em momentos diferentes. É preciso um lugar onde a proposta espere pelas assinaturas, sem dar poder novo a esse lugar.
 
 ## Decisão
-0. **Tipos de proposta:** emissão de credencial, **registro de bem**, **veto** de venda, **adicionar** e **remover gravame**. Cada tipo diz qual órgão assina (o do tipo de credencial ou o da classe do bem), qual documento é recalculado e qual é o alvo (uma proposta aberta por alvo).
+0. **Tipos de proposta:** emissão de credencial, **veto** e **revogação** de credencial, **registro de bem**, **veto** de venda, **adicionar** e **remover gravame**. Cada tipo diz qual órgão assina (o do tipo de credencial ou o da classe do bem), qual documento é recalculado e qual é o alvo (uma proposta aberta por alvo).
 1. **A proposta carrega só os campos** (por exemplo, no veto, só o id do bem; a revisão, o comprador, o preço e o prazo vêm **do estado do ledger**, nunca da proposta). O **documento a assinar é sempre recalculado** pelo nó (`Credentials.issue_doc`) e pelo navegador de cada membro; ninguém assina um documento recebido pronto.
 2. **O nó guarda as propostas** (`BrdcNode.Proposals`, puro e em memória, máximo de 200, uma por id de credencial). Cada aprovação (`chave ‖ assinatura`) é conferida contra o órgão do tipo, com chaves distintas; duplicada não conta. Nada ali é segredo (assinaturas sobre documento público).
 3. **Porta pública, tipo 6** (`proposta`): propor, aprovar e listar as dos órgãos de uma chave. Consultas novas no tipo 5: credenciais do titular e tipos de que uma chave faz parte.
@@ -20,4 +20,4 @@ Emitir uma credencial exige M assinaturas de membros de um órgão, cada um na *
 - Propostas somem do nó quando deixam de valer: credencial emitida, bem registrado, negociação encerrada, **revisão do bem mudou** (a aprovação antiga não vale para a nova revisão) ou **prazo do veto vencido** (o nó usa o horário do próximo bloco, não o do último).
 
 ## Pendente
-Persistência das propostas em disco (junto do ADR-0012) e propostas de **veto** e **revogação de credencial** e de **criação de classe/tipo** (hoje feitas por autoridades de teste em dev).
+Persistência das propostas em disco (junto do ADR-0012) e propostas de **criação de classe/tipo** (hoje feitas por autoridades de teste em dev).

@@ -179,6 +179,26 @@ asset_ops =
     Map.merge(o, %{doc: hex.(doc), approvals: Enum.map(aps, hex), payload: hex.(payload_fun.(aps))})
   end
 
+cred_ops =
+  for o <- [
+        %{op: "veto", id: "cnh-1", issued_at: "1000"},
+        %{op: "revoke", id: "cnh-1", reason: "fraude"}
+      ] do
+    {doc, payload_fun} =
+      case o.op do
+        "veto" ->
+          {BrdcLedger.Credentials.veto_doc(chain, o.id, String.to_integer(o.issued_at)),
+           &BrdcLedger.Credentials.veto_payload(o.id, &1)}
+
+        "revoke" ->
+          {BrdcLedger.Credentials.revoke_doc(chain, o.id, o.reason),
+           &BrdcLedger.Credentials.revoke_payload(o.id, o.reason, &1)}
+      end
+
+    aps = approvals_of.(doc)
+    Map.merge(o, %{doc: hex.(doc), approvals: Enum.map(aps, hex), payload: hex.(payload_fun.(aps))})
+  end
+
 File.write!(
   "vectors/tx.json",
   JSON.encode!(%{
@@ -187,6 +207,7 @@ File.write!(
     contract_txs: contract_txs,
     issues: issues,
     asset_ops: asset_ops,
+    cred_ops: cred_ops,
     assets: assets,
     chain_id: "brdc-vectors"
   })

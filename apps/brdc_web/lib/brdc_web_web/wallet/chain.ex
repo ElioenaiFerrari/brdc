@@ -110,7 +110,8 @@ defmodule BrdcWebWeb.Wallet.Chain do
          {:ok, props} <- Client.proposals_for(endpoint, pub),
          {:ok, assets} <- Client.assets_of(endpoint, hash),
          {:ok, classes} <- Client.classes_for(endpoint, pub),
-         {:ok, organ_assets} <- Client.organ_assets(endpoint, pub) do
+         {:ok, organ_assets} <- Client.organ_assets(endpoint, pub),
+         {:ok, organ_creds} <- Client.organ_credentials(endpoint, pub) do
       {:ok,
        %{
          credentials: Enum.map(creds, &cred_for_browser/1),
@@ -118,7 +119,8 @@ defmodule BrdcWebWeb.Wallet.Chain do
          proposals: Enum.map(props, &proposal_for_browser/1),
          assets: Enum.map(assets, &asset_for_browser/1),
          classes: Enum.map(classes, &class_for_browser/1),
-         organ_assets: Enum.map(organ_assets, &asset_for_browser/1)
+         organ_assets: Enum.map(organ_assets, &asset_for_browser/1),
+         organ_credentials: Enum.map(organ_creds, &cred_for_browser/1)
        }}
     else
       _ -> {:error, :offline}
@@ -129,6 +131,7 @@ defmodule BrdcWebWeb.Wallet.Chain do
     %{
       id: c.id,
       type: c.type,
+      subject: Bech32m.encode("brdc", c.subject),
       data: Base.encode16(c.data, case: :lower),
       ref: c.ref,
       status: c.status,

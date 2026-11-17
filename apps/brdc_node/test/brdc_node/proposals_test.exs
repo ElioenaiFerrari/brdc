@@ -248,4 +248,76 @@ defmodule BrdcNode.ProposalsTest do
     Node.produce(node)
     assert [%{status: :active}] = Node.credentials_of(node, addr(50))
   end
+
+  # emite cnh-1 (público, janela de 60 s) e devolve o nó
+  defp with_credential(clock \\ fn -> 1_000 end) do
+    node = world(clock)
+    f = fields()
+    {:ok, id} = Node.propose(node, f)
+    for i <- [30, 31], do: Node.approve(node, id, approval(i, f))
+    [%{approvals: ap}] = Node.proposals_for(node, pub(30))
+
+    run(
+      node,
+      99,
+      15,
+      Credentials.issue_payload(f.type, f.id, f.subject, f.data, f.ref, ap),
+      10_000
+    )
+
+    node
+  end
+
+  defp sign_doc(doc, signers), do: for(i <- signers, do: Approvals.approval(doc, seed(i)))
+  defp veto_doc, do: Credentials.veto_doc("prop-test", "cnh-1", 1_000)
+
+  test "veto de credencial por proposta: só com a credencial pendente e dentro da janela" do
+    node = with_credential()
+    assert [%{id: "cnh-1", status: :pending}] = Node.organ_credentials(node, pub(30))
+    assert Node.organ_credentials(node, pub(50)) == []
+
+    assert {:ok, id} = Node.propose(node, :cred_veto, %{id: "cnh-1"})
+    assert {:error, :no_credential} = Node.propose(node, :cred_veto, %{id: "x"})
+    [a, b] = sign_doc(veto_doc(), [30, 32])
+    assert {:ok, 1} = Node.approve(node, id, a)
+    assert {:ok, 2} = Node.approve(node, id, b)
+    assert {:error, :bad_approval} = Node.approve(node, id, hd(sign_doc(veto_doc(), [50])))
+
+    [%{approvals: ap}] = Node.proposals_for(node, pub(31))
+    run(node, 99, 17, Credentials.veto_payload("cnh-1", ap))
+    assert [%{status: :vetoed}] = Node.credentials_of(node, addr(50))
+    # não está mais pendente: a proposta caducou
+    assert Node.proposals_for(node, pub(31)) == []
+  end
+
+  test "proposta de veto de credencial caduca quando a janela de contestação passa" do
+    {:ok, clock} = Agent.start_link(fn -> 1_000 end)
+    node = with_credential(fn -> Agent.get(clock, & &1) end)
+    {:ok, _} = Node.propose(node, :cred_veto, %{id: "cnh-1"})
+    Agent.update(clock, fn _ -> 1_100 end)
+    assert Node.proposals_for(node, pub(30)) == []
+    assert {:error, :window_closed} = Node.propose(node, :cred_veto, %{id: "cnh-1"})
+  end
+
+  test "revogação de credencial ativa por proposta; o motivo é parte do documento" do
+    {:ok, clock} = Agent.start_link(fn -> 1_000 end)
+    node = with_credential(fn -> Agent.get(clock, & &1) end)
+    Agent.update(clock, fn _ -> 1_100 end)
+    run(node, 50, 18, BrdcCrypto.Encoding.encode([:string], ["cnh-1"]))
+    assert [%{status: :active}] = Node.credentials_of(node, addr(50))
+
+    assert {:error, :bad_id} = Node.propose(node, :cred_revoke, %{id: "cnh-1", reason: ""})
+    f = %{id: "cnh-1", reason: "fraude"}
+    assert {:ok, id} = Node.propose(node, :cred_revoke, f)
+    doc = Credentials.revoke_doc("prop-test", "cnh-1", "fraude")
+    for i <- [30, 31], do: Node.approve(node, id, hd(sign_doc(doc, [i])))
+    # aprovação para outro motivo não vale
+    other = Credentials.revoke_doc("prop-test", "cnh-1", "outro")
+    assert {:error, :bad_approval} = Node.approve(node, id, hd(sign_doc(other, [32])))
+
+    [%{approvals: ap}] = Node.proposals_for(node, pub(32))
+    run(node, 99, 19, Credentials.revoke_payload("cnh-1", "fraude", ap), 10_000)
+    assert [%{status: :revoked}] = Node.credentials_of(node, addr(50))
+    assert Node.proposals_for(node, pub(32)) == []
+  end
 end

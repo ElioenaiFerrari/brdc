@@ -121,30 +121,26 @@ defmodule BrdcNode.Client do
 
   @doc "Credenciais cujo titular é o endereço."
   @spec credentials_of(endpoint(), <<_::256>>) :: {:ok, [map()]} | {:error, term()}
-  def credentials_of({host, port}, <<_::256>> = addr) do
-    list_query(host, port, :query, <<2, addr::binary>>, Handler.cred_schema(), fn [
-                                                                                    id,
-                                                                                    type,
-                                                                                    subject,
-                                                                                    data,
-                                                                                    ref,
-                                                                                    status,
-                                                                                    issued,
-                                                                                    active,
-                                                                                    expires
-                                                                                  ] ->
-      %{
-        id: id,
-        type: type,
-        subject: subject,
-        data: data,
-        ref: ref,
-        status: status,
-        issued_at: issued,
-        active_at: active,
-        expires_at: expires
-      }
-    end)
+  def credentials_of({host, port}, <<_::256>> = addr),
+    do: list_query(host, port, :query, <<2, addr::binary>>, Handler.cred_schema(), &cred_map/1)
+
+  @doc "Credenciais dos tipos cujo órgão inclui a chave pública (para propor veto e revogação)."
+  @spec organ_credentials(endpoint(), <<_::256>>) :: {:ok, [map()]} | {:error, term()}
+  def organ_credentials({host, port}, <<_::256>> = pub),
+    do: list_query(host, port, :query, <<7, pub::binary>>, Handler.cred_schema(), &cred_map/1)
+
+  defp cred_map([id, type, subject, data, ref, status, issued, active, expires]) do
+    %{
+      id: id,
+      type: type,
+      subject: subject,
+      data: data,
+      ref: ref,
+      status: status,
+      issued_at: issued,
+      active_at: active,
+      expires_at: expires
+    }
   end
 
   @doc "Bens que o endereço possui ou está comprando, com a negociação em curso."

@@ -6,7 +6,7 @@ defmodule BrdcNode.Handler do
   - `:status` → `[chain_id, altura, horário, oferta, hash do último bloco, pendentes, taxa-base, taxa por byte]`
   - `:get_account` (corpo: 32 bytes do endereço) → `[saldo, nonce, saldo com pendentes, nonce com pendentes]`
   - `:submit_tx` (corpo: transação assinada) → id de 32 bytes, ou o motivo da recusa
-  - `:query` (`<<1, endereço>>` contratos · `<<2, endereço>>` credenciais do titular · `<<3, chave pública>>` tipos cujo órgão inclui a chave · `<<4, endereço>>` bens · `<<5, chave pública>>` classes do órgão · `<<6, chave pública>>` bens das classes do órgão)
+  - `:query` (`<<1, endereço>>` contratos · `<<2, endereço>>` credenciais do titular · `<<3, chave pública>>` tipos cujo órgão inclui a chave · `<<4, endereço>>` bens · `<<5, chave pública>>` classes do órgão · `<<6, chave pública>>` bens das classes do órgão · `<<7, chave pública>>` credenciais dos órgãos)
   - `:proposal` (`<<1, tipo, campos>>` propõe (emissão, registro, veto, gravame) · `<<2, id, aprovação>>` aprova · `<<3, chave pública>>` lista as dos seus órgãos)
   - `:get_block` → ainda não suportado (o bloco não tem codificação de rede)
   """
@@ -101,27 +101,8 @@ defmodule BrdcNode.Handler do
     {:ok, Encoding.encode([{:list, :bytes}], [entries])}
   end
 
-  def handle(node, :query, <<2, addr::binary-size(32)>>) do
-    entries =
-      node
-      |> Node.credentials_of(addr)
-      |> Enum.take(@max_listed)
-      |> Enum.map(fn c ->
-        Encoding.encode(@cred, [
-          c.id,
-          c.type,
-          c.subject,
-          c.data,
-          c.ref,
-          Atom.to_string(c.status),
-          c.issued_at,
-          c.active_at,
-          c.expires_at
-        ])
-      end)
-
-    {:ok, Encoding.encode([{:list, :bytes}], [entries])}
-  end
+  def handle(node, :query, <<2, addr::binary-size(32)>>),
+    do: {:ok, cred_list(Node.credentials_of(node, addr))}
 
   def handle(node, :query, <<3, pub::binary-size(32)>>) do
     entries =
@@ -144,6 +125,9 @@ defmodule BrdcNode.Handler do
 
     {:ok, Encoding.encode([{:list, :bytes}], [entries])}
   end
+
+  def handle(node, :query, <<7, pub::binary-size(32)>>),
+    do: {:ok, cred_list(Node.organ_credentials(node, pub))}
 
   def handle(node, :query, <<4, addr::binary-size(32)>>),
     do: {:ok, asset_list(Node.assets_of(node, addr))}
@@ -279,6 +263,27 @@ defmodule BrdcNode.Handler do
           price,
           deadline,
           a.veto_window
+        ])
+      end)
+
+    Encoding.encode([{:list, :bytes}], [entries])
+  end
+
+  defp cred_list(creds) do
+    entries =
+      creds
+      |> Enum.take(@max_listed)
+      |> Enum.map(fn c ->
+        Encoding.encode(@cred, [
+          c.id,
+          c.type,
+          c.subject,
+          c.data,
+          c.ref,
+          Atom.to_string(c.status),
+          c.issued_at,
+          c.active_at,
+          c.expires_at
         ])
       end)
 
