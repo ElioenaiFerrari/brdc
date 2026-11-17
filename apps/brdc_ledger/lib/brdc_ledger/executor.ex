@@ -8,7 +8,7 @@ defmodule BrdcLedger.Executor do
   some**, para a oferta continuar sendo `emitido − queimado`.
   """
   alias BrdcCrypto.{Address, Encoding}
-  alias BrdcLedger.{Approvals, Assets, Params, State, Tx}
+  alias BrdcLedger.{Approvals, Assets, Credentials, Params, State, Tx}
 
   @typedoc "Motivo da recusa: um átomo (ex.: `:bad_nonce`, `:not_enough_approvals`, `:has_lien`)."
   @type error :: atom()
@@ -19,6 +19,10 @@ defmodule BrdcLedger.Executor do
     do: p.transfer_base + p.per_byte * byte_size(Tx.encode(tx))
 
   def min_fee(%Params{} = p, %Tx{kind: kind}) when kind in 5..13, do: Assets.min_fee(p, kind)
+
+  def min_fee(%Params{} = p, %Tx{kind: kind}) when kind in 14..19,
+    do: Credentials.min_fee(p, kind)
+
   def min_fee(%Params{}, %Tx{}), do: 0
 
   @doc "Aplica uma transação. Devolve `{:ok, estado, taxa_paga}` ou `{:error, motivo}`."
@@ -89,6 +93,9 @@ defmodule BrdcLedger.Executor do
 
   defp run(s, sender, %Tx{kind: kind, payload: payload}) when kind in 5..13,
     do: Assets.run(s, sender, kind, payload)
+
+  defp run(s, sender, %Tx{kind: kind, payload: payload}) when kind in 14..19,
+    do: Credentials.run(s, sender, kind, payload)
 
   defp run(s, _sender, %Tx{kind: 4, payload: payload}) do
     with {:ok, [seq, reserve, ref, approvals]} <-

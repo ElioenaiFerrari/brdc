@@ -6,7 +6,8 @@ defmodule BrdcLedger.Tx do
   Campos: `chain_id`, `kind`, `nonce`, `fee`, `sender_pub`, `payload`, `signature`.
   O remetente é o endereço derivado de `sender_pub`. Tipos (`kind`):
   `1` transferência, `2` mint, `3` burn, `4` atestado de reserva, `5` a `13` bens (classe,
-  registro, oferta, aceite, cancelamento, veto, finalização, gravame, remoção de gravame).
+  registro, oferta, aceite, cancelamento, veto, finalização, gravame, remoção de gravame),
+  `14` a `19` credenciais (tipo, emissão, contestação, veto, ativação, revogação).
   """
   alias BrdcCrypto.{Address, Ed25519, Encoding, Hash}
 
@@ -20,7 +21,7 @@ defmodule BrdcLedger.Tx do
 
   @type t :: %__MODULE__{
           chain_id: String.t(),
-          kind: 1..13,
+          kind: 1..19,
           nonce: non_neg_integer(),
           fee: non_neg_integer(),
           sender_pub: <<_::256>>,
@@ -75,7 +76,7 @@ defmodule BrdcLedger.Tx do
   def decode(bin) when is_binary(bin) do
     case Encoding.decode(@signed, bin) do
       {:ok, [chain, kind, nonce, fee, pub, payload, sig]}
-      when kind in 1..13 ->
+      when kind in 1..19 ->
         {:ok,
          %__MODULE__{
            chain_id: chain,

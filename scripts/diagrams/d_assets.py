@@ -18,3 +18,21 @@ def asset_trade():
     d.text(60, 428, "A chain confia no órgão para saber quem é o dono; ela só executa as regras e guarda o escrow.", 11, MUTED)
     d.legend([(LINK, "etapa do comprador", False), (MUTED, "janela", False), (BOTO, "desfechos possíveis", False)])
     return d
+
+
+def credential_lifecycle():
+    d = D("credential-lifecycle", 1100, 560, "Ciclo de vida de uma credencial", "Nasce pendente, ganha validade depois da janela de contestação e pode ser revogada pelo órgão", "FLUXO 10")
+    d.arrow([(280, 168), (420, 168)], "link", label="emissão M-de-N", at=(350, 150))
+    d.arrow([(640, 168), (780, 168)], "default", label="passou a janela", at=(710, 150))
+    d.arrow([(530, 206), (530, 290)], "boto", label="titular contesta / órgão veta", at=(640, 248))
+    d.arrow([(890, 206), (890, 290)], "boto", label="expira ou órgão revoga", at=(990, 248))
+    d.node(60, 130, 220, 76, "Órgão emite", "tipo 15 · cred_id único", "onca", "pública ou privada", sub2="dados ou compromisso")
+    d.node(420, 130, 220, 76, "Pendente", "janela de contestação", "focal", "em segundos")
+    d.node(780, 130, 220, 76, "Ativa", "ativada por qualquer um", "link", "tipo 18", sub2="vale até expirar")
+    d.node(420, 290, 220, 76, "Descartada", "contestada ou vetada", "plain", "tipos 16 e 17", sub2="id queimado")
+    d.node(780, 290, 220, 76, "Sem validade", "expirada ou revogada", "boto", "tipo 19")
+    d.node(60, 290, 220, 76, "Divórcio ativado", "referencia o casamento", "store", "revoga o casamento", sub2="um por cônjuge")
+    d.text(60, 410, "Privada guarda só um compromisso de 32 bytes: quem recebe os dados confere contra ele.", 11, INK, weight=600)
+    d.text(60, 428, "A chain prova quem declarou o quê e quando; não prova que a declaração é verdadeira.", 11, MUTED)
+    d.legend([(LINK, "emissão", False), (MUTED, "ciclo normal", False), (BOTO, "saídas", False)])
+    return d

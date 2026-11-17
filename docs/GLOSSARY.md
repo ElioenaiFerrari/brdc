@@ -36,3 +36,5 @@ Termos em ordem alfabética. Termos novos entram aqui no mesmo trabalho que os i
 - **SLIP-10:** regra para derivar chaves filhas de uma semente em Ed25519 (só endurecidas).
 - **Codificação determinística:** jeito fixo de transformar uma estrutura em bytes, igual em todos os nós e no JS (ADR-0011).
 - **Autocustódia (carteira não custodial):** só o usuário guarda as chaves. A frase e a passphrase nascem no navegador e nunca vão para o servidor; ninguém (nem a equipe da BRDC) consegue assinar por ele ou recuperar a conta. Perdeu a frase, perdeu o acesso.
+- **Credencial:** declaração de um órgão sobre um titular (CNH, identidade, casamento…), com janela de contestação, validade e revogação (ADR-0019).
+- **Compromisso:** hash de 32 bytes dos dados privados de uma credencial; quem recebe os dados confere contra ele.

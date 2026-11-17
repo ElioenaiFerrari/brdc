@@ -18,6 +18,8 @@ defmodule BrdcLedger.State do
             refs: MapSet.new(),
             attestation: nil,
             classes: %{},
+            cred_types: %{},
+            credentials: %{},
             assets: %{},
             deals: %{},
             escrow: 0,
@@ -33,6 +35,8 @@ defmodule BrdcLedger.State do
           burned: non_neg_integer(),
           refs: MapSet.t({atom(), String.t()}),
           classes: %{String.t() => map()},
+          cred_types: %{String.t() => map()},
+          credentials: %{String.t() => map()},
           assets: %{String.t() => map()},
           deals: %{String.t() => map()},
           escrow: non_neg_integer(),
@@ -58,6 +62,10 @@ defmodule BrdcLedger.State do
   @spec total_balances(t()) :: non_neg_integer()
   def total_balances(%__MODULE__{accounts: a}),
     do: a |> Map.values() |> Enum.reduce(0, &(&1.balance + &2))
+
+  @doc "A credencial está ativa e não expirou em `now` (segundos)? Atalho para `Credentials.valid?/3`."
+  @spec credential_valid?(t(), String.t(), non_neg_integer()) :: boolean()
+  def credential_valid?(%__MODULE__{} = s, id, now), do: BrdcLedger.Credentials.valid?(s, id, now)
 
   @doc "Saldos + escrow: tudo o que está em circulação (igual a emitido − queimado)."
   @spec total_held(t()) :: non_neg_integer()
@@ -124,7 +132,9 @@ defmodule BrdcLedger.State do
           {:fixed, 32},
           {:fixed, 32},
           {:fixed, 32},
-          :u64
+          :u64,
+          {:fixed, 32},
+          {:fixed, 32}
         ],
         [
           s.minted,
@@ -140,7 +150,9 @@ defmodule BrdcLedger.State do
             merkle(class_leaves(s)),
             merkle(asset_leaves(s)),
             merkle(deal_leaves(s)),
-            s.escrow
+            s.escrow,
+            merkle(type_leaves(s)),
+            merkle(cred_leaves(s))
           ]
       )
     )
@@ -168,6 +180,49 @@ defmodule BrdcLedger.State do
         Encoding.encode(
           [:string, :string, {:fixed, 32}, :bytes, :u64, {:list, :bytes}],
           [id, a.class, a.owner, a.meta, a.rev, liens]
+        )
+      )
+    end
+  end
+
+  defp type_leaves(s) do
+    for {id, t} <- Enum.sort(s.cred_types) do
+      Hash.tagged(
+        "brdc/state/credtype",
+        Encoding.encode(
+          [:string, {:list, {:fixed, 32}}, :u32, :u64, :u64, :u8, :string, :u8],
+          [
+            id,
+            t.organ,
+            t.threshold,
+            t.contest_window,
+            t.validity,
+            if(t.privacy == :public, do: 0, else: 1),
+            t.ref_type,
+            if(t.revokes_ref, do: 1, else: 0)
+          ]
+        )
+      )
+    end
+  end
+
+  defp cred_leaves(s) do
+    for {id, c} <- Enum.sort(s.credentials) do
+      Hash.tagged(
+        "brdc/state/credential",
+        Encoding.encode(
+          [:string, :string, {:fixed, 32}, :bytes, :string, :string, :u64, :u64, :u64],
+          [
+            id,
+            c.type,
+            c.subject,
+            c.data,
+            c.ref,
+            Atom.to_string(c.status),
+            c.issued_at,
+            c.active_at,
+            c.expires_at
+          ]
         )
       )
     end

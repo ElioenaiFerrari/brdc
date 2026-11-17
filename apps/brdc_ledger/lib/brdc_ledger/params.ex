@@ -23,7 +23,8 @@ defmodule BrdcLedger.Params do
     authorities: [],
     authority_threshold: 1,
     asset_register_fee: 50_000,
-    asset_step_fee: 20_000
+    asset_step_fee: 20_000,
+    credential_fee: 10_000
   ]
 
   @type t :: %__MODULE__{
@@ -41,7 +42,8 @@ defmodule BrdcLedger.Params do
           authorities: [<<_::256>>],
           authority_threshold: pos_integer(),
           asset_register_fee: non_neg_integer(),
-          asset_step_fee: non_neg_integer()
+          asset_step_fee: non_neg_integer(),
+          credential_fee: non_neg_integer()
         }
 
   @doc "1 BRDC em unidades mínimas."

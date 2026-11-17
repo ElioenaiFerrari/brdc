@@ -85,12 +85,23 @@ Invariante → teste que o cobre. Linhas *planejadas* ainda não têm teste: ent
 | **Saldos + escrow = oferta** e escrow = soma dos negócios aceitos em sequências aleatórias; bloco real reparte as taxas | `assets_test.exs` (`propriedades`, `em bloco`) |
 | Autoridades e taxas de bens na gênese (ida e volta, validações, hash) | `brdc_node/test/brdc_node/genesis_test.exs` |
 
+## Fase 5, parte de credenciais (pronta)
+| Invariante | Teste |
+|---|---|
+| Tipo só com M-de-N das autoridades raiz; janela, privacidade e referência válidas; sem autoridade, sem tipo | `brdc_ledger/test/brdc_ledger/credentials_test.exs` (`tipos`) |
+| Emissão pelo órgão (M-de-N); nasce pendente; ativa só depois da janela; expira pela validade; tipo sem validade nunca expira | `credentials_test.exs` (`emissão, janela e validade`) |
+| Público até 512 bytes; privado exatamente 32 (compromisso); aprovação vale só para aquele titular e aqueles dados | `credentials_test.exs` |
+| Contestação só do titular e só na janela; veto M-de-N só na janela; revogação M-de-N definitiva; `cred_id` queimado | `credentials_test.exs` (`contestação, veto e revogação`) |
+| Casamento por cônjuge; divórcio exige casamento ativo do mesmo titular e o revoga ao ser ativado; vetado ou contestado não revoga | `credentials_test.exs` (`casamento e divórcio`) |
+| Taxas: emissão e revogação 0,01; tipo 0,05; resto sem mínimo | `credentials_test.exs` (`taxas`) |
+| **Em qualquer sequência:** ids não se repetem, só ativo é válido, divórcio ativo deixa o casamento revogado | `credentials_test.exs` (`propriedade`) |
+
 ## Planejado por fase
 | Fase | Invariantes (a testar) |
 |---|---|
 | 3 (resto) | Sem blocos vazios (no nó); rotação do conjunto por mais de 2/3; WAL e recuperação |
 | 7 (inclui o resto da 4) | Roteiro de dois computadores validado |
-| 5 (resto) | Credenciais: janela de contestação, validade, veto, revogação, privada vs pública; casamento por cônjuge e divórcio revoga casamento; contratos: só as transições do modelo, valores em escrow conservados |
+| 5 (resto) | Contratos entre partes: só as transições do modelo, valores em escrow conservados |
 | 6 | Carteira: frase e passphrase nunca saem do navegador; cofre cifrado; assinatura no navegador aceita pelo nó; CSP sem scripts de terceiros |
 | 7 | Explorador mostra quem assinou cada bloco; roteiro de dois computadores validado |
 

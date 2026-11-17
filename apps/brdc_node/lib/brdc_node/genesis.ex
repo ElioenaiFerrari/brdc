@@ -33,6 +33,7 @@ defmodule BrdcNode.Genesis do
     authority_threshold: 1,
     asset_register_fee: 50_000,
     asset_step_fee: 20_000,
+    credential_fee: 10_000,
     bootstrap: []
   ]
 
@@ -59,7 +60,11 @@ defmodule BrdcNode.Genesis do
            check(pos_u64?(g.max_block_txs) and pos_u64?(g.max_block_bytes), :bad_block_limits),
          :ok <- check_windows(g),
          :ok <- check_authorities(g),
-         :ok <- check(Enum.all?([g.asset_register_fee, g.asset_step_fee], &u64?/1), :bad_fees),
+         :ok <-
+           check(
+             Enum.all?([g.asset_register_fee, g.asset_step_fee, g.credential_fee], &u64?/1),
+             :bad_fees
+           ),
          :ok <- check_bootstrap(g) do
       {:ok, g}
     end
@@ -94,6 +99,7 @@ defmodule BrdcNode.Genesis do
           :u32,
           :u64,
           :u64,
+          :u64,
           {:list, :bytes}
         ],
         [
@@ -113,6 +119,7 @@ defmodule BrdcNode.Genesis do
           g.authority_threshold,
           g.asset_register_fee,
           g.asset_step_fee,
+          g.credential_fee,
           boot
         ]
       )
@@ -138,7 +145,8 @@ defmodule BrdcNode.Genesis do
         authorities: g.authorities,
         authority_threshold: g.authority_threshold,
         asset_register_fee: g.asset_register_fee,
-        asset_step_fee: g.asset_step_fee
+        asset_step_fee: g.asset_step_fee,
+        credential_fee: g.credential_fee
       )
 
     p
@@ -175,7 +183,8 @@ defmodule BrdcNode.Genesis do
         "transfer_base" => g.transfer_base,
         "per_byte" => g.per_byte,
         "asset_register" => g.asset_register_fee,
-        "asset_step" => g.asset_step_fee
+        "asset_step" => g.asset_step_fee,
+        "credential" => g.credential_fee
       },
       "block_limits" => %{"max_txs" => g.max_block_txs, "max_bytes" => g.max_block_bytes},
       "windows_seconds" => %{
@@ -211,6 +220,7 @@ defmodule BrdcNode.Genesis do
              per_byte: get_in(m, ["fees", "per_byte"]),
              asset_register_fee: get_in(m, ["fees", "asset_register"]),
              asset_step_fee: get_in(m, ["fees", "asset_step"]),
+             credential_fee: get_in(m, ["fees", "credential"]),
              authorities: authorities,
              authority_threshold: m["authority_threshold"],
              max_block_txs: get_in(m, ["block_limits", "max_txs"]),

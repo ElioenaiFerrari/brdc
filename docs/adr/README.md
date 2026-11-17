@@ -22,6 +22,7 @@ Cada decisão de segurança ou produto vira um ADR: contexto, decisão, alternat
 | [0016](0016-block-time-and-windows-in-seconds.md) | Tempo do bloco e janelas em segundos (P4) | Aceito |
 | [0017](0017-initial-contract-catalog.md) | Catálogo inicial de contratos entre partes (P5) | Aceito |
 | [0018](0018-assets-direct-trade-with-veto-window.md) | Bens: classes com órgão, negociação direta e janela de veto | Aceito |
+| [0019](0019-credentials-with-contest-window-and-revocation.md) | Credenciais: tipos com órgão, contestação, validade e revogação | Aceito |
 
 ## Decisões PENDENTES (esperam o dono do produto)
 Nada abaixo entra em código antes da resposta.

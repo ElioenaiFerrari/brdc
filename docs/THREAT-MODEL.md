@@ -29,6 +29,7 @@ Primeira versão (Fase 0): o que queremos defender, de quem, e o que ainda **nã
 | T11 | Divergência entre carteira (JS) e nó (Elixir) na derivação de chaves | vetores oficiais de BIP-39/SLIP-10 e o `vectors/crypto.json` conferidos em Elixir e JS (`make js-vectors`) | o JS de referência é Node; a biblioteca final do navegador (P6) terá de passar nos mesmos vetores |
 | T12 | Proponente manipula o horário do bloco para encurtar ou alongar uma janela | horário não decresce (ledger) e só passa se estiver até 15 s à frente do relógio dos validadores (ADR-0016) | desvio de segundos é possível; irrelevante para janelas de horas |
 | T13 | Órgão de uma classe comprometido (M assinaturas) registra bens falsos ou veta negociações à vontade | aprovações M-de-N, `rev` impede reaproveitar aprovação, documento do veto amarra comprador, preço e prazo (ADR-0018) | **a chain não sabe se o bem existe**: confia no órgão; sem arbitragem |
+| T14 | Órgão de um tipo comprometido emite credenciais falsas ou revoga verdadeiras; titular de credencial privada é identificado pelo endereço | M-de-N; `cred_id` único e aprovações amarradas aos campos; privada guarda só compromisso (ADR-0019) | **a chain só prova autoria**, não verdade; privada não é anônima (o endereço e o compromisso são públicos) |
 
 ## O que este modelo **não** cobre ainda
 Privacidade das credenciais privadas em detalhe, governança de emissores e validadores (decisão pendente), ataques de rede em escala (eclipse, partição longa), segurança do navegador do usuário, conformidade legal.
