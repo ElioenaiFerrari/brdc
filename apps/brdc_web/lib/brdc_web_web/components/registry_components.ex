@@ -139,4 +139,73 @@ defmodule BrdcWebWeb.RegistryComponents do
     </section>
     """
   end
+
+  def assets_panel(assigns) do
+    ~H"""
+    <section
+      id="assets"
+      phx-hook="Assets"
+      phx-update="ignore"
+      aria-label="Bens"
+      class="brdc-card space-y-4 p-5"
+      hidden
+    >
+      <div data-step="list" class="space-y-4">
+        <h2 class="text-lg font-bold">Bens</h2>
+        <p class="text-sm text-[var(--brdc-muted)]">
+          Bens registrados em seu nome ou que você está comprando. O registro e o veto são do órgão da classe;
+          a venda entre pessoas retém o dinheiro na rede até o fim da janela de veto.
+        </p>
+        <ul data-role="list" class="space-y-3"></ul>
+        <p data-role="error" hidden role="alert" class="brdc-alert"></p>
+      </div>
+
+      <div data-step="offer" hidden class="space-y-4">
+        <h2 class="text-lg font-bold" data-role="offer-title">Oferecer à venda</h2>
+        <label class="block text-sm text-[var(--brdc-muted)]">
+          Comprador (endereço brdc1…)
+          <input
+            type="text"
+            data-role="buyer"
+            autocomplete="off"
+            autocapitalize="none"
+            spellcheck="false"
+            class="brdc-input mt-1 font-mono text-sm"
+          />
+        </label>
+        <label class="block text-sm text-[var(--brdc-muted)]">
+          Preço em BRDC
+          <input
+            type="text"
+            data-role="price"
+            inputmode="decimal"
+            autocomplete="off"
+            placeholder="0,00"
+            class="brdc-input mt-1"
+          />
+        </label>
+        <p data-role="error" hidden role="alert" class="brdc-alert"></p>
+        <button type="button" data-action="offer-review" class="brdc-btn-primary">Revisar</button>
+        <button type="button" data-action="back" class="brdc-btn-ghost w-full">Voltar</button>
+      </div>
+
+      <div data-step="review" hidden class="space-y-4">
+        <h2 class="text-lg font-bold">Confira antes de assinar</h2>
+        <div data-role="review-lines" class="brdc-inset space-y-3 p-4 text-sm"></div>
+        <p data-role="error" hidden role="alert" class="brdc-alert"></p>
+        <button type="button" data-action="confirm" class="brdc-btn-primary">Assinar e enviar</button>
+        <button type="button" data-action="back" class="brdc-btn-ghost w-full">Cancelar</button>
+      </div>
+
+      <div data-step="done" hidden class="space-y-3">
+        <h2 class="text-lg font-bold">Enviado</h2>
+        <p class="text-sm text-[var(--brdc-muted)]">
+          Entra no próximo bloco. Id:
+          <span data-role="txid" class="mt-1 block break-all font-mono text-xs"></span>
+        </p>
+        <button type="button" data-action="back" class="brdc-btn-ghost w-full">Voltar</button>
+      </div>
+    </section>
+    """
+  end
 end

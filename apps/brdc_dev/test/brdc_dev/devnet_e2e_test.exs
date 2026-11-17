@@ -2,21 +2,22 @@ defmodule BrdcDev.DevnetE2ETest do
   use ExUnit.Case, async: true
   alias BrdcCrypto.{Account, Address, Ed25519}
   alias BrdcDev.{Authority, Devnet, Funding}
-  alias BrdcLedger.{Approvals, Contracts, Credentials, Tx}
+  alias BrdcLedger.{Approvals, Assets, Contracts, Credentials, Tx}
   alias BrdcNode.{Client, Genesis, Handler, Node}
   alias BrdcP2p.{Guard, PublicPort}
 
   @moduletag :tmp_dir
   @abandon "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
 
-  defp boot(dir) do
+  defp boot(dir, clock \\ fn -> System.os_time(:second) end) do
     {:ok, devnet} = Devnet.ensure(dir)
 
     {:ok, node} =
       Node.start_link(
         genesis: devnet.genesis,
         seed: devnet.seeds["v1"],
-        block_interval_ms: :manual
+        block_interval_ms: :manual,
+        clock: clock
       )
 
     {:ok, guard} = Guard.start_link(sweep_ms: :never)
@@ -284,5 +285,94 @@ defmodule BrdcDev.DevnetE2ETest do
     assert {:error, "malformed"} = PublicPort.request(host, port, :proposal, <<1, 1, 2, 3>>)
     assert {:error, "bad_query"} = PublicPort.request(host, port, :query, <<2, 1, 2>>)
     assert {:ok, _} = PublicPort.request(host, port, :status, <<>>)
+  end
+
+  test "bens pela rede: classe, registro, oferta, aceite com escrow e finalização depois da janela",
+       %{tmp_dir: dir} do
+    {:ok, clock} = Agent.start_link(fn -> 1_000_000 end)
+    {devnet, node, endpoint} = boot(dir, fn -> Agent.get(clock, & &1) end)
+    {:ok, organ} = Account.from_mnemonic(@abandon, "m1")
+    {:ok, seller} = Account.from_mnemonic(@abandon, "vendedor")
+    {:ok, buyer} = Account.from_mnemonic(@abandon, "comprador")
+    {:ok, seller_hash} = Address.decode(seller.address)
+    {:ok, buyer_hash} = Address.decode(buyer.address)
+    {:ok, status} = Client.status(endpoint)
+
+    assert {:ok, _} =
+             Authority.create_class(endpoint, devnet, %{
+               id: "imovel",
+               organ: [organ.public_key],
+               veto_window: 5
+             })
+
+    Node.produce(node)
+    meta = "Rua A, 10"
+
+    assert {:ok, _} =
+             Authority.register_asset(endpoint, devnet, [organ.seed], %{
+               class: "imovel",
+               id: "casa-1",
+               owner: seller_hash,
+               meta: meta
+             })
+
+    {:ok, _} = Funding.mint(endpoint, devnet, buyer_hash, 100_000_000)
+    {:ok, _} = Funding.mint(endpoint, devnet, seller_hash, 1_000_000)
+    Node.produce(node)
+
+    assert {:ok, [a]} = Client.assets_of(endpoint, seller_hash)
+
+    assert %{
+             id: "casa-1",
+             class: "imovel",
+             meta: ^meta,
+             role: "owner",
+             deal: "none",
+             veto_window: 5
+           } = a
+
+    assert {:ok, []} = Client.assets_of(endpoint, buyer_hash)
+
+    send_tx = fn acct, kind, payload ->
+      {:ok, %{pending_nonce: n}} = Client.account(endpoint, elem(Address.decode(acct.address), 1))
+
+      tx =
+        Tx.sign(
+          %Tx{
+            chain_id: status.chain_id,
+            kind: kind,
+            nonce: n,
+            fee: status.asset_step_fee,
+            sender_pub: acct.public_key,
+            payload: payload
+          },
+          acct.seed
+        )
+
+      assert {:ok, _} = Client.submit_tx(endpoint, Tx.encode(tx))
+      Node.produce(node)
+    end
+
+    send_tx.(seller, 7, Assets.offer_payload("casa-1", buyer_hash, 50_000_000))
+    assert {:ok, [b]} = Client.assets_of(endpoint, buyer_hash)
+    assert %{role: "buyer", deal: "offered", price: 50_000_000, other: ^seller_hash} = b
+
+    send_tx.(buyer, 8, Assets.asset_payload("casa-1"))
+
+    assert {:ok, [%{deal: "accepted", deadline: deadline}]} =
+             Client.assets_of(endpoint, buyer_hash)
+
+    assert deadline == 1_000_005
+    {:ok, acc} = Client.account(endpoint, buyer_hash)
+    assert acc.balance == 100_000_000 - 50_000_000 - status.asset_step_fee
+
+    # janela aberta: finalizar é recusado; depois dela, passa sem nenhum bloco novo antes
+    Agent.update(clock, fn _ -> 1_000_010 end)
+    send_tx.(buyer, 11, Assets.asset_payload("casa-1"))
+
+    assert {:ok, [%{role: "owner", deal: "none", rev: 1}]} =
+             Client.assets_of(endpoint, buyer_hash)
+
+    assert {:ok, []} = Client.assets_of(endpoint, seller_hash)
   end
 end

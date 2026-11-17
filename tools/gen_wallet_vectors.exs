@@ -128,6 +128,22 @@ issues =
     })
   end
 
+asset_inputs = [
+  %{asset: "casa-1", price: "50000000"},
+  %{asset: "carro-9", price: "1500000"}
+]
+
+assets =
+  for i <- asset_inputs do
+    %{
+      asset: i.asset,
+      price: i.price,
+      buyer: b.address,
+      offer_payload: hex.(BrdcLedger.Assets.offer_payload(i.asset, holder_hash, String.to_integer(i.price))),
+      asset_payload: hex.(BrdcLedger.Assets.asset_payload(i.asset))
+    }
+  end
+
 File.write!(
   "vectors/tx.json",
   JSON.encode!(%{
@@ -135,6 +151,7 @@ File.write!(
     txs: txs,
     contract_txs: contract_txs,
     issues: issues,
+    assets: assets,
     chain_id: "brdc-vectors"
   })
 )

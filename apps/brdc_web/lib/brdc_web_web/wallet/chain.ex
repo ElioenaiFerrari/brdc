@@ -14,6 +14,7 @@ defmodule BrdcWebWeb.Wallet.Chain do
           time: non_neg_integer(),
           contract_fee: non_neg_integer(),
           credential_fee: non_neg_integer(),
+          asset_step_fee: non_neg_integer(),
           balance: non_neg_integer(),
           pending_balance: non_neg_integer(),
           nonce: non_neg_integer(),
@@ -52,6 +53,7 @@ defmodule BrdcWebWeb.Wallet.Chain do
          time: st.time,
          contract_fee: st.contract_fee,
          credential_fee: st.credential_fee,
+         asset_step_fee: st.asset_step_fee,
          pending: st.pending,
          transfer_base: st.transfer_base,
          per_byte: st.per_byte,
@@ -103,12 +105,14 @@ defmodule BrdcWebWeb.Wallet.Chain do
          {:ok, hash} <- Address.decode(address),
          {:ok, creds} <- Client.credentials_of(endpoint, hash),
          {:ok, types} <- Client.types_for(endpoint, pub),
-         {:ok, props} <- Client.proposals_for(endpoint, pub) do
+         {:ok, props} <- Client.proposals_for(endpoint, pub),
+         {:ok, assets} <- Client.assets_of(endpoint, hash) do
       {:ok,
        %{
          credentials: Enum.map(creds, &cred_for_browser/1),
          types: Enum.map(types, &type_for_browser/1),
-         proposals: Enum.map(props, &proposal_for_browser/1)
+         proposals: Enum.map(props, &proposal_for_browser/1),
+         assets: Enum.map(assets, &asset_for_browser/1)
        }}
     else
       _ -> {:error, :offline}
@@ -125,6 +129,22 @@ defmodule BrdcWebWeb.Wallet.Chain do
       issued_at: Integer.to_string(c.issued_at),
       active_at: Integer.to_string(c.active_at),
       expires_at: Integer.to_string(c.expires_at)
+    }
+  end
+
+  defp asset_for_browser(a) do
+    %{
+      id: a.id,
+      class: a.class,
+      meta: Base.encode16(a.meta, case: :lower),
+      rev: a.rev,
+      liens: a.liens,
+      role: a.role,
+      deal: a.deal,
+      other: Bech32m.encode("brdc", a.other),
+      price: Integer.to_string(a.price),
+      deadline: Integer.to_string(a.deadline),
+      veto_window: Integer.to_string(a.veto_window)
     }
   end
 

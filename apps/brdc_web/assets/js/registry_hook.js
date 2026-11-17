@@ -12,7 +12,14 @@ import {
 
 const TYPE_LABEL = { cnh: "CNH", identidade: "Identificação", casamento: "Certidão de casamento", divorcio: "Certidão de divórcio" };
 const label = (t) => TYPE_LABEL[t] ?? t;
-const ERRORS = {
+export const ERRORS = {
+  not_owner: "Só o dono do bem pode fazer isto.",
+  not_buyer: "Só o comprador indicado pode aceitar.",
+  deal_active: "Já há uma negociação deste bem.",
+  has_lien: "O bem tem gravame; o órgão precisa removê-lo antes.",
+  self_deal: "O comprador não pode ser você mesmo.",
+  no_deal: "Não há negociação deste bem (já finalizada ou cancelada?).",
+  no_asset: "Bem não encontrado.",
   offline: "Sem conexão com a rede. Tente de novo em instantes.",
   insufficient_funds: "Saldo insuficiente para a taxa.",
   bad_nonce: "A conta mudou enquanto você revisava. Revise de novo.",
@@ -33,14 +40,14 @@ const ERRORS = {
   not_your_address: "A transação não é desta carteira.",
 };
 
-const el = (tag, cls, text) => {
+export const el = (tag, cls, text) => {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
   if (text !== undefined) e.textContent = text;
   return e;
 };
-const when = (secs) => new Date(Number(secs) * 1000).toLocaleString("pt-BR");
-const TONE = { green: "brdc-chip brdc-chip-green", blue: "brdc-chip brdc-chip-blue", yellow: "brdc-chip brdc-chip-yellow", neutral: "brdc-chip" };
+export const when = (secs) => new Date(Number(secs) * 1000).toLocaleString("pt-BR");
+export const TONE = { green: "brdc-chip brdc-chip-green", blue: "brdc-chip brdc-chip-blue", yellow: "brdc-chip brdc-chip-yellow", neutral: "brdc-chip" };
 
 // assinatura do que o desenho depende: os dados e, de cada credencial, só se a janela/validade já passou
 function signature(r, credentials) {
@@ -51,7 +58,7 @@ function signature(r, credentials) {
 }
 
 // base comum: passos, erros, estado ocupado, preparar (dados públicos da rede) e enviar a transação assinada
-const Base = {
+export const Base = {
   q(s) { return this.el.querySelector(s); },
   step(name) {
     for (const s of this.el.querySelectorAll("[data-step]")) s.hidden = s.dataset.step !== name;

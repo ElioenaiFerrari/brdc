@@ -52,6 +52,10 @@ defmodule BrdcNode.Node do
   @spec credentials_of(GenServer.server(), <<_::256>>) :: [map()]
   def credentials_of(node, addr), do: GenServer.call(node, {:credentials_of, addr})
 
+  @doc "Bens de um endereço: os que ele possui e os que ele está comprando (com a negociação, se houver)."
+  @spec assets_of(GenServer.server(), <<_::256>>) :: [map()]
+  def assets_of(node, addr), do: GenServer.call(node, {:assets_of, addr})
+
   @doc "Tipos de credencial cujo órgão inclui a chave pública `pub` (quem pode assinar emissões)."
   @spec types_for(GenServer.server(), <<_::256>>) :: [map()]
   def types_for(node, pub), do: GenServer.call(node, {:types_for, pub})
@@ -126,6 +130,7 @@ defmodule BrdcNode.Node do
        per_byte: st.params.per_byte,
        contract_fee: st.params.contract_fee,
        credential_fee: st.params.credential_fee,
+       asset_step_fee: st.params.asset_step_fee,
        genesis_hash: Genesis.hash(s.genesis)
      }, s}
   end
@@ -148,6 +153,28 @@ defmodule BrdcNode.Node do
     {:reply,
      for({id, c} <- Enum.sort(s.state.credentials), c.subject == addr, do: Map.put(c, :id, id)),
      s}
+  end
+
+  def handle_call({:assets_of, addr}, _from, s) do
+    st = s.state
+
+    mine =
+      for {id, a} <- Enum.sort(st.assets), a.owner == addr or buying?(st.deals[id], addr) do
+        role = if a.owner == addr, do: "owner", else: "buyer"
+
+        %{
+          id: id,
+          class: a.class,
+          meta: a.meta,
+          rev: a.rev,
+          liens: map_size(a.liens),
+          role: role,
+          deal: st.deals[id],
+          veto_window: st.classes[a.class].veto_window
+        }
+      end
+
+    {:reply, mine, s}
   end
 
   def handle_call({:types_for, pub}, _from, s) do
@@ -224,6 +251,9 @@ defmodule BrdcNode.Node do
 
   defp arm(%{timer: t} = s) when t != nil, do: s
   defp arm(s), do: %{s | timer: Process.send_after(self(), :produce, s.interval)}
+
+  defp buying?(nil, _addr), do: false
+  defp buying?(deal, addr), do: deal.buyer == addr
 
   # sem blocos vazios, o horário do último bloco fica parado; o próximo bloco usa o relógio (nunca menos que o último).
   # A transação é conferida nesse horário (senão uma janela já vencida pareceria aberta).

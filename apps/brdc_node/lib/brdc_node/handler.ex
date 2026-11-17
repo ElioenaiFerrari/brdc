@@ -13,7 +13,7 @@ defmodule BrdcNode.Handler do
   alias BrdcCrypto.Encoding
   alias BrdcNode.Node
 
-  @status [:string, :u64, :u64, :u64, :bytes, :u32, :u64, :u64, :u64, :u64]
+  @status [:string, :u64, :u64, :u64, :bytes, :u32, :u64, :u64, :u64, :u64, :u64]
   @contract [
     :string,
     :string,
@@ -29,6 +29,7 @@ defmodule BrdcNode.Handler do
   @type_entry [:string, :u32, :u32, :u8, :u64, :u64, :string]
   @proposal [:bytes, :string, :string, {:fixed, 32}, :bytes, :string, {:list, :bytes}, :u32]
   @fields [:string, :string, {:fixed, 32}, :bytes, :string]
+  @asset [:string, :string, :bytes, :u32, :u32, :string, :string, {:fixed, 32}, :u64, :u64, :u64]
   @max_listed 100
   @max_contracts 100
   @account [:u64, :u64, :u64, :u64]
@@ -53,7 +54,8 @@ defmodule BrdcNode.Handler do
        s.transfer_base,
        s.per_byte,
        s.contract_fee,
-       s.credential_fee
+       s.credential_fee,
+       s.asset_step_fee
      ])}
   end
 
@@ -127,9 +129,34 @@ defmodule BrdcNode.Handler do
     {:ok, Encoding.encode([{:list, :bytes}], [entries])}
   end
 
+  def handle(node, :query, <<4, addr::binary-size(32)>>) do
+    entries =
+      node
+      |> Node.assets_of(addr)
+      |> Enum.take(@max_listed)
+      |> Enum.map(fn a ->
+        {status, other, price, deadline} = deal_fields(a)
+
+        Encoding.encode(@asset, [
+          a.id,
+          a.class,
+          a.meta,
+          a.rev,
+          a.liens,
+          a.role,
+          status,
+          other,
+          price,
+          deadline,
+          a.veto_window
+        ])
+      end)
+
+    {:ok, Encoding.encode([{:list, :bytes}], [entries])}
+  end
+
   def handle(_node, :query, _), do: {:error, :bad_query}
 
-  # proposta de assinatura coletiva: `<<1, campos>>` propõe, `<<2, id, aprovação>>` aprova, `<<3, chave>>` lista
   def handle(node, :proposal, <<1, rest::binary>>) do
     with {:ok, [type, id, subject, data, ref]} <- Encoding.decode(@fields, rest),
          {:ok, pid} <-
@@ -199,6 +226,8 @@ defmodule BrdcNode.Handler do
     do: for({k, v} <- Enum.sort(map), do: Encoding.encode(@kv, [Atom.to_string(k), v]))
 
   @doc false
+  def asset_schema, do: @asset
+  @doc false
   def cred_schema, do: @cred
   @doc false
   def type_schema, do: @type_entry
@@ -214,4 +243,13 @@ defmodule BrdcNode.Handler do
   def status_schema, do: @status
   @doc false
   def account_schema, do: @account
+
+  defp deal_fields(%{deal: nil}), do: {"none", <<0::256>>, 0, 0}
+
+  defp deal_fields(%{deal: d, role: role}) do
+    other = if role == "owner", do: d.buyer, else: d.seller
+    {Atom.to_string(d.status), other, d.price, d.deadline || 0}
+  end
+
+  # proposta de assinatura coletiva: `<<1, campos>>` propõe, `<<2, id, aprovação>>` aprova, `<<3, chave>>` lista
 end

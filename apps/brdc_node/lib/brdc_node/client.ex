@@ -24,7 +24,8 @@ defmodule BrdcNode.Client do
             base,
             per_byte,
             contract_fee,
-            credential_fee
+            credential_fee,
+            asset_step_fee
           ]} <-
            Encoding.decode(Handler.status_schema(), bin) do
       {:ok,
@@ -38,7 +39,8 @@ defmodule BrdcNode.Client do
          transfer_base: base,
          per_byte: per_byte,
          contract_fee: contract_fee,
-         credential_fee: credential_fee
+         credential_fee: credential_fee,
+         asset_step_fee: asset_step_fee
        }}
     else
       {:error, _} = err -> err
@@ -139,6 +141,38 @@ defmodule BrdcNode.Client do
         issued_at: issued,
         active_at: active,
         expires_at: expires
+      }
+    end)
+  end
+
+  @doc "Bens que o endereço possui ou está comprando, com a negociação em curso."
+  @spec assets_of(endpoint(), <<_::256>>) :: {:ok, [map()]} | {:error, term()}
+  def assets_of({host, port}, <<_::256>> = addr) do
+    list_query(host, port, :query, <<4, addr::binary>>, Handler.asset_schema(), fn [
+                                                                                     id,
+                                                                                     class,
+                                                                                     meta,
+                                                                                     rev,
+                                                                                     liens,
+                                                                                     role,
+                                                                                     status,
+                                                                                     other,
+                                                                                     price,
+                                                                                     deadline,
+                                                                                     window
+                                                                                   ] ->
+      %{
+        id: id,
+        class: class,
+        meta: meta,
+        rev: rev,
+        liens: liens,
+        role: role,
+        deal: status,
+        other: other,
+        price: price,
+        deadline: deadline,
+        veto_window: window
       }
     end)
   end

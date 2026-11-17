@@ -139,6 +139,12 @@ Invariante → teste que o cobre. Linhas *planejadas* ainda não têm teste: ent
 | **A taxa mínima do JS é a do Elixir** (vetores) e é calculável antes de assinar | `send.test.mjs`; `ledger_test.exs` |
 | **Verificado à mão (Chrome 153):** criar, financiar, saldo aparece sozinho, enviar 12,5, destino e remetente conferem no nó | roteiro manual no Fluxo 14 |
 
+## Bens na carteira (dono e comprador, pronto)
+| Invariante | Teste |
+|---|---|
+| Oferta, aceite, cancelamento e finalização no JS têm cargas **iguais** às do Elixir | `assets/js/crypto/assets.test.mjs` + `vectors/tx.json` |
+| Ciclo pela rede: classe, registro, oferta, escrow, finalização depois da janela (relógio) | `apps/brdc_dev/test/brdc_dev/devnet_e2e_test.exs` |
+
 ## Credenciais e assinatura coletiva (pronto)
 | Invariante | Teste |
 |---|---|
