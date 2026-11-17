@@ -27,6 +27,8 @@ Invariante → teste que o cobre. Linhas *planejadas* ainda não têm teste: ent
 | Replay, nonce fora de ordem, outra rede, saldo insuficiente, taxa baixa (tabela ADR-0014) | `ledger_test.exs` (`transferência`) |
 | Bloco atômico, sem bloco vazio, altura/prev_hash/state_root conferidos, taxa repartida entre quem assinou | `ledger_test.exs` (`bloco`) |
 | Atestado de reserva: só com M emissores, sequência estritamente crescente, não altera saldos nem oferta, subcobertura não congela | `ledger_test.exs` (`atestado de reserva`) |
+| Horário do bloco: vira o `agora` do estado, não decresce, entra no hash e na raiz; plausibilidade (não volta, margem de 15 s) | `ledger_test.exs` (`bloco`) |
+| Janelas ficam entre o mínimo e o máximo (parâmetros do ledger e da gênese) | `ledger_test.exs` (`parâmetros`), `genesis_test.exs` |
 | **Oferta = emitido − queimado = soma dos saldos** em sequências aleatórias | `properties_test.exs` |
 | Mesmo bloco, mesmo estado, mesma raiz (determinismo) | `properties_test.exs` |
 
@@ -71,12 +73,24 @@ Invariante → teste que o cobre. Linhas *planejadas* ainda não têm teste: ent
 
 *Fica para a Fase 7:* o roteiro de dois computadores (precisa do nó `brdc_node` rodando).
 
+## Fase 5, parte de bens (pronta)
+| Invariante | Teste |
+|---|---|
+| Classe só com M-de-N das autoridades raiz; janela dentro do limite; id válido; sem autoridade configurada, sem classe | `brdc_ledger/test/brdc_ledger/assets_test.exs` (`classe e registro`) |
+| Registro só com M-de-N do órgão da classe; id único; aprovação de um bem não vale para outro dono ou metadado | `assets_test.exs` |
+| Negociação: só o dono oferta, só o comprador aceita, escrow sai do saldo, finalização só depois do prazo, cancelamento só antes do aceite | `assets_test.exs` (`negociação`) |
+| Veto só do órgão (M-de-N) e só antes do prazo; devolve o escrow; aprovação amarrada a comprador, preço e prazo | `assets_test.exs` (`veto do órgão`) |
+| Gravame bloqueia oferta e finalização; aprovação do órgão não se repete (`rev`) | `assets_test.exs` (`gravames`) |
+| Taxas: registro e classe 0,05; etapas 0,02; ações do órgão sem mínimo; taxa baixa recusada | `assets_test.exs` (`taxas`) |
+| **Saldos + escrow = oferta** e escrow = soma dos negócios aceitos em sequências aleatórias; bloco real reparte as taxas | `assets_test.exs` (`propriedades`, `em bloco`) |
+| Autoridades e taxas de bens na gênese (ida e volta, validações, hash) | `brdc_node/test/brdc_node/genesis_test.exs` |
+
 ## Planejado por fase
 | Fase | Invariantes (a testar) |
 |---|---|
 | 3 (resto) | Sem blocos vazios (no nó); rotação do conjunto por mais de 2/3; WAL e recuperação |
 | 7 (inclui o resto da 4) | Roteiro de dois computadores validado |
-| 5 | Bens: transferência só pelo dono, escrow e veto; credenciais: janela de contestação, validade, veto, revogação, privada vs pública; casamento por cônjuge e divórcio revoga casamento; contratos: só as transições do modelo, valores em escrow conservados |
+| 5 (resto) | Credenciais: janela de contestação, validade, veto, revogação, privada vs pública; casamento por cônjuge e divórcio revoga casamento; contratos: só as transições do modelo, valores em escrow conservados |
 | 6 | Carteira: frase e passphrase nunca saem do navegador; cofre cifrado; assinatura no navegador aceita pelo nó; CSP sem scripts de terceiros |
 | 7 | Explorador mostra quem assinou cada bloco; roteiro de dois computadores validado |
 

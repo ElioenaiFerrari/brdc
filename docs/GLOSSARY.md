@@ -31,6 +31,8 @@ Termos em ordem alfabética. Termos novos entram aqui no mesmo trabalho que os i
 - **Stablecoin:** moeda cripto cujo valor é atrelado a outra (aqui, 1 BRDC = 1 BRL).
 - **Validador:** nó autorizado a votar nos blocos.
 - **Veto (janela de):** período em que o órgão pode barrar uma operação pendente (por exemplo, uma transferência de bem).
+- **Horário do bloco (`time`):** segundos Unix no cabeçalho; é o único "agora" que o ledger conhece. Janelas vencem por ele (ADR-0016).
 - **Passphrase (25ª palavra):** texto opcional que entra na conversão frase → semente (BIP-39); outra passphrase abre outra carteira.
 - **SLIP-10:** regra para derivar chaves filhas de uma semente em Ed25519 (só endurecidas).
 - **Codificação determinística:** jeito fixo de transformar uma estrutura em bytes, igual em todos os nós e no JS (ADR-0011).
+- **Autocustódia (carteira não custodial):** só o usuário guarda as chaves. A frase e a passphrase nascem no navegador e nunca vão para o servidor; ninguém (nem a equipe da BRDC) consegue assinar por ele ou recuperar a conta. Perdeu a frase, perdeu o acesso.

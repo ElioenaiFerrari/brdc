@@ -25,6 +25,7 @@ Um fluxo por funcionalidade (texto e diagrama) em `docs/flows/`, à medida que c
 - [06 — Como um validador descobre os outros](flows/06-peer-discovery.md) (Fase 4)
 - [07 — Como uma rede de teste nasce (keygen e gênese)](flows/07-keygen-and-genesis.md) (Fase 4)
 - [08 — Porta pública para carteira e explorador](flows/08-public-port.md) (Fase 4)
+- [09 — Transferência de propriedade de um bem](flows/09-asset-trade.md) (Fase 5)
 
 A [arquitetura](ARCHITECTURE.md) dá a visão geral.
 

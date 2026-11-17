@@ -7,28 +7,18 @@ defmodule BrdcLedger.Executor do
   `fee_pool` devolvido, que o bloco reparte entre os validadores (ADR-0014); aqui ela **não
   some**, para a oferta continuar sendo `emitido − queimado`.
   """
-  alias BrdcCrypto.{Address, Ed25519, Encoding}
-  alias BrdcLedger.{Params, State, Tx}
+  alias BrdcCrypto.{Address, Encoding}
+  alias BrdcLedger.{Approvals, Assets, Params, State, Tx}
 
-  @type error ::
-          :wrong_chain
-          | :bad_signature
-          | :bad_nonce
-          | :fee_too_low
-          | :insufficient_funds
-          | :bad_payload
-          | :bad_amount
-          | :ref_used
-          | :not_enough_approvals
-          | :not_sender
-          | :overflow
-          | :bad_sequence
+  @typedoc "Motivo da recusa: um átomo (ex.: `:bad_nonce`, `:not_enough_approvals`, `:has_lien`)."
+  @type error :: atom()
 
   @doc "Taxa mínima de uma transação, pela tabela dos parâmetros (ADR-0014)."
   @spec min_fee(Params.t(), Tx.t()) :: non_neg_integer()
   def min_fee(%Params{} = p, %Tx{kind: 1} = tx),
     do: p.transfer_base + p.per_byte * byte_size(Tx.encode(tx))
 
+  def min_fee(%Params{} = p, %Tx{kind: kind}) when kind in 5..13, do: Assets.min_fee(p, kind)
   def min_fee(%Params{}, %Tx{}), do: 0
 
   @doc "Aplica uma transação. Devolve `{:ok, estado, taxa_paga}` ou `{:error, motivo}`."
@@ -97,6 +87,9 @@ defmodule BrdcLedger.Executor do
 
   # --- atestado de reserva: M emissores publicam o total em reais -----------
 
+  defp run(s, sender, %Tx{kind: kind, payload: payload}) when kind in 5..13,
+    do: Assets.run(s, sender, kind, payload)
+
   defp run(s, _sender, %Tx{kind: 4, payload: payload}) do
     with {:ok, [seq, reserve, ref, approvals]} <-
            decode(payload, [:u64, :u64, :string, {:list, :bytes}]),
@@ -120,14 +113,7 @@ defmodule BrdcLedger.Executor do
   end
 
   defp approved_doc(%State{params: p}, doc, approvals) do
-    signers =
-      for <<pub::binary-32, sig::binary-64>> <- Enum.filter(approvals, &(byte_size(&1) == 96)),
-          pub in p.issuers,
-          Ed25519.verify(doc, sig, pub),
-          uniq: true,
-          do: pub
-
-    check(length(signers) >= p.threshold, :not_enough_approvals)
+    check(Approvals.enough?(doc, approvals, p.issuers, p.threshold), :not_enough_approvals)
   end
 
   # --- util ---------------------------------------------------------------

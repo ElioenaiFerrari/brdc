@@ -11,17 +11,33 @@ defmodule BrdcLedger.Block do
   alias BrdcCrypto.{Encoding, Hash}
   alias BrdcLedger.{Executor, State, Tx}
 
-  @enforce_keys [:height, :prev_hash, :proposer, :signers, :txs]
-  defstruct [:height, :prev_hash, :proposer, :signers, :txs, :state_root]
+  @enforce_keys [:height, :time, :prev_hash, :proposer, :signers, :txs]
+  defstruct [:height, :time, :prev_hash, :proposer, :signers, :txs, :state_root]
 
   @type t :: %__MODULE__{
           height: pos_integer(),
+          time: non_neg_integer(),
           prev_hash: nil | <<_::256>>,
           proposer: <<_::256>>,
           signers: [<<_::256>>],
           txs: [Tx.t()],
           state_root: nil | <<_::256>>
         }
+
+  @doc """
+  O horário do bloco é plausível? **Não** faz parte da execução (o ledger só usa `block.time`):
+  é a conferência que cada validador faz antes de dar prevote (ADR-0016). `time` não pode ser
+  menor que o do bloco anterior nem passar de `local_now + max_drift` (segundos).
+  """
+  @spec plausible_time?(
+          non_neg_integer(),
+          non_neg_integer(),
+          non_neg_integer(),
+          non_neg_integer()
+        ) :: boolean()
+  def plausible_time?(time, prev_time, local_now, max_drift \\ 15) do
+    time >= prev_time and time <= local_now + max_drift
+  end
 
   @doc "Raiz de Merkle das transações (pelos ids)."
   @spec tx_root([Tx.t()]) :: <<_::256>>
@@ -36,8 +52,16 @@ defmodule BrdcLedger.Block do
     Hash.tagged(
       "brdc/block",
       Encoding.encode(
-        [:u64, :bytes, {:fixed, 32}, {:list, {:fixed, 32}}, {:fixed, 32}, {:fixed, 32}],
-        [b.height, b.prev_hash || <<>>, b.proposer, b.signers, tx_root(b.txs), b.state_root]
+        [:u64, :u64, :bytes, {:fixed, 32}, {:list, {:fixed, 32}}, {:fixed, 32}, {:fixed, 32}],
+        [
+          b.height,
+          b.time,
+          b.prev_hash || <<>>,
+          b.proposer,
+          b.signers,
+          tx_root(b.txs),
+          b.state_root
+        ]
       )
     )
   end
@@ -46,11 +70,12 @@ defmodule BrdcLedger.Block do
   Executa as transações sobre `state` e devolve o bloco com `state_root` preenchido e o novo estado.
   Usado por quem **propõe** o bloco.
   """
-  @spec build(State.t(), <<_::256>>, [<<_::256>>], [Tx.t()]) ::
+  @spec build(State.t(), <<_::256>>, [<<_::256>>], [Tx.t()], non_neg_integer()) ::
           {:ok, t(), State.t()} | {:error, term()}
-  def build(%State{} = state, proposer, signers, txs) do
+  def build(%State{} = state, proposer, signers, txs, time) do
     block = %__MODULE__{
       height: state.height + 1,
+      time: time,
       prev_hash: state.last_hash,
       proposer: proposer,
       signers: signers,
@@ -77,6 +102,7 @@ defmodule BrdcLedger.Block do
 
   defp execute(%State{params: p} = state, %__MODULE__{} = b) do
     with :ok <- check(b.height == state.height + 1, :bad_height),
+         :ok <- check(b.time >= state.time, :time_goes_back),
          :ok <- check(b.prev_hash == state.last_hash, :bad_prev_hash),
          :ok <- check(b.txs != [], :empty_block),
          :ok <- check(length(b.txs) <= p.max_block_txs, :too_many_txs),
@@ -87,7 +113,7 @@ defmodule BrdcLedger.Block do
            ),
          :ok <- check(b.signers != [] and b.signers == Enum.uniq(b.signers), :bad_signers),
          :ok <- check(b.proposer in b.signers, :proposer_not_signer),
-         {:ok, s1, fees} <- run_txs(state, b.txs) do
+         {:ok, s1, fees} <- run_txs(%{state | time: b.time}, b.txs) do
       s2 = distribute(s1, fees, b)
       {:ok, %{s2 | height: b.height, last_hash: block_hash_for(b, s2)}}
     end

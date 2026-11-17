@@ -5,6 +5,8 @@ defmodule Mix.Tasks.Brdc.Genesis do
 
       mix brdc.genesis --chain-id brdc-devnet --validators v1,v2,v3 --issuers i1,i2 --threshold 2 \\
         --peer v1=127.0.0.1:4001 --peer v2=127.0.0.1:4002 [--dir net] [--out net/genesis.json]
+        [--authorities a1,a2 --authority-threshold 2]   # criam classes de bens e tipos de credencial
+        [--contest-window 60 --veto-window 60 --min-window 1]   # segundos; rede de teste
 
   Os nomes são lidos de `<dir>/<nome>.pub` (criados por `mix brdc.keygen`). A **ordem** dos
   validadores define o rodízio de proponentes. Só chaves públicas entram no arquivo.
@@ -20,8 +22,13 @@ defmodule Mix.Tasks.Brdc.Genesis do
           chain_id: :string,
           validators: :string,
           issuers: :string,
+          authorities: :string,
+          authority_threshold: :integer,
           threshold: :integer,
           peer: :keep,
+          contest_window: :integer,
+          veto_window: :integer,
+          min_window: :integer,
           dir: :string,
           out: :string
         ]
@@ -32,14 +39,19 @@ defmodule Mix.Tasks.Brdc.Genesis do
 
     validators = names(opts[:validators]) |> Enum.map(&public!(dir, &1))
     issuers = names(opts[:issuers]) |> Enum.map(&public!(dir, &1))
+    authorities = names(opts[:authorities]) |> Enum.map(&public!(dir, &1))
     bootstrap = opts |> Keyword.get_values(:peer) |> Enum.map(&peer!(&1, dir))
 
     case Genesis.new(
-           chain_id: opts[:chain_id] || "brdc-devnet",
-           validators: validators,
-           issuers: issuers,
-           threshold: opts[:threshold] || length(issuers),
-           bootstrap: bootstrap
+           [
+             chain_id: opts[:chain_id] || "brdc-devnet",
+             validators: validators,
+             issuers: issuers,
+             threshold: opts[:threshold] || length(issuers),
+             bootstrap: bootstrap,
+             authorities: authorities,
+             authority_threshold: opts[:authority_threshold] || max(length(authorities), 1)
+           ] ++ windows(opts)
          ) do
       {:ok, g} ->
         File.mkdir_p!(Path.dirname(out))
@@ -51,6 +63,9 @@ defmodule Mix.Tasks.Brdc.Genesis do
         Mix.raise("gênese inválida: #{reason}")
     end
   end
+
+  # só repassa as janelas que o operador informou; o resto fica no padrão (ADR-0016)
+  defp windows(opts), do: Keyword.take(opts, [:contest_window, :veto_window, :min_window])
 
   defp names(nil), do: []
   defp names(s), do: s |> String.split(",", trim: true) |> Enum.map(&String.trim/1)

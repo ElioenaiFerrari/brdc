@@ -3,7 +3,7 @@
 **Status:** Aceito (dono do produto, 2026-11-17)
 
 ## Contexto
-A carteira é web, não custodial (hot wallet estilo MetaMask/Proton). LiveView renderiza no servidor, o que **não pode** envolver chaves. Opções: LiveView + hooks JS; SPA falando JSON-RPC; extensão de navegador.
+A carteira é web e de **autocustódia** (não custodial: só o usuário guarda as chaves; hot wallet estilo MetaMask/Proton). LiveView renderiza no servidor, o que **não pode** envolver chaves. Opções: LiveView + hooks JS; SPA falando JSON-RPC; extensão de navegador.
 
 ## Decisão
 **LiveView para a casca** (telas, saldo, histórico, explorador, tempo real por PubSub) e **criptografia só no navegador**: geração da frase, derivação, cofre cifrado pela senha local (IndexedDB) e **assinatura** rodam em JavaScript (hooks). O servidor **nunca recebe** chave, frase ou passphrase; só transação já assinada. CSP estrita e **nenhum script de terceiros**.

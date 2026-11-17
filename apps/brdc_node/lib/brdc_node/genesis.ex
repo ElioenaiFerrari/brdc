@@ -25,6 +25,14 @@ defmodule BrdcNode.Genesis do
     per_byte: 1,
     max_block_txs: 1_000,
     max_block_bytes: 1_000_000,
+    contest_window: 86_400,
+    veto_window: 172_800,
+    min_window: 60,
+    max_window: 31_536_000,
+    authorities: [],
+    authority_threshold: 1,
+    asset_register_fee: 50_000,
+    asset_step_fee: 20_000,
     bootstrap: []
   ]
 
@@ -49,6 +57,9 @@ defmodule BrdcNode.Genesis do
          :ok <- check(Enum.all?([g.transfer_base, g.per_byte], &u64?/1), :bad_fees),
          :ok <-
            check(pos_u64?(g.max_block_txs) and pos_u64?(g.max_block_bytes), :bad_block_limits),
+         :ok <- check_windows(g),
+         :ok <- check_authorities(g),
+         :ok <- check(Enum.all?([g.asset_register_fee, g.asset_step_fee], &u64?/1), :bad_fees),
          :ok <- check_bootstrap(g) do
       {:ok, g}
     end
@@ -75,6 +86,14 @@ defmodule BrdcNode.Genesis do
           :u64,
           :u64,
           :u64,
+          :u64,
+          :u64,
+          :u64,
+          :u64,
+          {:list, {:fixed, 32}},
+          :u32,
+          :u64,
+          :u64,
           {:list, :bytes}
         ],
         [
@@ -86,6 +105,14 @@ defmodule BrdcNode.Genesis do
           g.per_byte,
           g.max_block_txs,
           g.max_block_bytes,
+          g.contest_window,
+          g.veto_window,
+          g.min_window,
+          g.max_window,
+          g.authorities,
+          g.authority_threshold,
+          g.asset_register_fee,
+          g.asset_step_fee,
           boot
         ]
       )
@@ -103,7 +130,15 @@ defmodule BrdcNode.Genesis do
         transfer_base: g.transfer_base,
         per_byte: g.per_byte,
         max_block_txs: g.max_block_txs,
-        max_block_bytes: g.max_block_bytes
+        max_block_bytes: g.max_block_bytes,
+        contest_window: g.contest_window,
+        veto_window: g.veto_window,
+        min_window: g.min_window,
+        max_window: g.max_window,
+        authorities: g.authorities,
+        authority_threshold: g.authority_threshold,
+        asset_register_fee: g.asset_register_fee,
+        asset_step_fee: g.asset_step_fee
       )
 
     p
@@ -133,9 +168,22 @@ defmodule BrdcNode.Genesis do
       "genesis_hash" => hex(hash(g)),
       "validators" => Enum.map(g.validators, &hex/1),
       "issuers" => Enum.map(g.issuers, &hex/1),
+      "authorities" => Enum.map(g.authorities, &hex/1),
+      "authority_threshold" => g.authority_threshold,
       "issuer_threshold" => g.threshold,
-      "fees" => %{"transfer_base" => g.transfer_base, "per_byte" => g.per_byte},
+      "fees" => %{
+        "transfer_base" => g.transfer_base,
+        "per_byte" => g.per_byte,
+        "asset_register" => g.asset_register_fee,
+        "asset_step" => g.asset_step_fee
+      },
       "block_limits" => %{"max_txs" => g.max_block_txs, "max_bytes" => g.max_block_bytes},
+      "windows_seconds" => %{
+        "contest" => g.contest_window,
+        "veto" => g.veto_window,
+        "min" => g.min_window,
+        "max" => g.max_window
+      },
       "bootstrap" =>
         Enum.map(
           g.bootstrap,
@@ -151,6 +199,7 @@ defmodule BrdcNode.Genesis do
     with {:ok, %{} = m} <- decode_json(text),
          {:ok, validators} <- unhex_list(m["validators"]),
          {:ok, issuers} <- unhex_list(m["issuers"]),
+         {:ok, authorities} <- unhex_list(m["authorities"] || []),
          {:ok, bootstrap} <- parse_bootstrap(m["bootstrap"]),
          {:ok, g} <-
            new(
@@ -160,8 +209,16 @@ defmodule BrdcNode.Genesis do
              threshold: m["issuer_threshold"],
              transfer_base: get_in(m, ["fees", "transfer_base"]),
              per_byte: get_in(m, ["fees", "per_byte"]),
+             asset_register_fee: get_in(m, ["fees", "asset_register"]),
+             asset_step_fee: get_in(m, ["fees", "asset_step"]),
+             authorities: authorities,
+             authority_threshold: m["authority_threshold"],
              max_block_txs: get_in(m, ["block_limits", "max_txs"]),
              max_block_bytes: get_in(m, ["block_limits", "max_bytes"]),
+             contest_window: get_in(m, ["windows_seconds", "contest"]),
+             veto_window: get_in(m, ["windows_seconds", "veto"]),
+             min_window: get_in(m, ["windows_seconds", "min"]),
+             max_window: get_in(m, ["windows_seconds", "max"]),
              bootstrap: bootstrap
            ),
          :ok <- check(m["genesis_hash"] == hex(hash(g)), :hash_mismatch) do
@@ -187,6 +244,30 @@ defmodule BrdcNode.Genesis do
         Enum.all?(keys, &match?(<<_::256>>, &1))
 
     check(ok?, reason)
+  end
+
+  # autoridades raiz (criam classes de bens e tipos de credencial): podem não existir (0), mas
+  # se existirem são distintas e o limite cabe no conjunto
+  defp check_authorities(%{authorities: []}), do: :ok
+
+  defp check_authorities(g) do
+    check(
+      check_keys(g.authorities, 1..16, :bad_authorities) == :ok and
+        is_integer(g.authority_threshold) and g.authority_threshold >= 1 and
+        g.authority_threshold <= length(g.authorities),
+      :bad_authorities
+    )
+  end
+
+  defp check_windows(g) do
+    ws = [g.contest_window, g.veto_window, g.min_window, g.max_window]
+
+    ok? =
+      Enum.all?(ws, &pos_u64?/1) and g.min_window <= g.max_window and
+        g.contest_window in g.min_window..g.max_window//1 and
+        g.veto_window in g.min_window..g.max_window//1
+
+    check(ok?, :bad_windows)
   end
 
   defp check_bootstrap(g) do

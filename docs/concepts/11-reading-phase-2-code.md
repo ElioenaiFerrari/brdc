@@ -19,6 +19,7 @@ Valores em **unidades mínimas**: 1 BRDC = 1.000.000 ([ADR-0010](../adr/0010-acc
 - **Burn só pelo dono:** o emissor atesta que pagou os reais, mas é o titular quem pede a destruição.
 - **A taxa não some:** vai para quem assinou o bloco. Por isso, em qualquer momento, `soma dos saldos = emitido − queimado`.
 - **Atestado de reserva:** M emissores assinam "a reserva é X" com número de sequência crescente. `State.coverage/1` mostra a margem (`{:covered, n}` ou `{:under, n}`). É informação para o público auditar; não bloqueia ninguém.
+- **Tempo:** o bloco carrega `time` (segundos) e o estado guarda o `time` do último bloco: é o único "agora" que a execução conhece ([ADR-0016](../adr/0016-block-time-and-windows-in-seconds.md)). Por isso o ledger continua determinístico mesmo com janelas de horas ou dias.
 - **Sem halving:** não existe emissão automática ([ADR-0014](../adr/0014-fee-table-and-no-halving.md)).
 
 ## Rode você mesmo (`iex -S mix`)

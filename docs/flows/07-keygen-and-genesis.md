@@ -18,7 +18,7 @@ Cada validador e cada emissor gera a **própria chave** na própria máquina. De
    mix brdc.genesis --chain-id brdc-devnet --validators v1,v2,v3 --issuers i1,i2 --threshold 2 \
      --peer v1=127.0.0.1:4001 --peer v2=127.0.0.1:4002 --dir net
    ```
-   Grava `net/genesis.json` e imprime o hash. A **ordem** dos validadores define o rodízio de proponentes.
+   Grava `net/genesis.json` e imprime o hash. A **ordem** dos validadores define o rodízio de proponentes. As janelas (contestação 24 h e veto 48 h por padrão) podem ser encurtadas só para testes: `--contest-window 60 --veto-window 60 --min-window 1` ([ADR-0016](../adr/0016-block-time-and-windows-in-seconds.md)).
 3. Cada nó lê o arquivo (`Genesis.from_json/1`), que **valida tudo de novo** e confere o hash gravado.
 4. O nó deriva os parâmetros do ledger (`Genesis.ledger_params/1`) e a configuração do canal (`Genesis.channel_config/3`), que leva o hash da gênese para o `hello`.
 
@@ -43,5 +43,5 @@ Cada validador e cada emissor gera a **própria chave** na própria máquina. De
 ## Limites honestos
 - A chave privada fica **em arquivo no disco**, sem criptografia: é uma rede de teste. Chave de validador de produção pediria HSM ou cofre.
 - Na BEAM não há zeroização de memória.
-- A gênese **não tem** tempo de bloco nem alocação inicial de saldos: a moeda só nasce por mint dos emissores. O tempo de agrupamento (P3) ainda é decisão pendente.
+- A gênese **não tem** alocação inicial de saldos: a moeda só nasce por mint dos emissores. Tem as janelas em segundos; o intervalo de agrupamento de blocos (P3) ainda é decisão pendente.
 - A lista de partida é só um ponto de entrada; a descoberta ([Fluxo 06](06-peer-discovery.md)) faz o resto.

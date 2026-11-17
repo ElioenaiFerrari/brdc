@@ -162,7 +162,7 @@ defmodule BrdcLedger.LedgerTest do
       proposer = addr(50)
       signers = [proposer, addr(51), addr(52)]
       txs = [transfer(1, 2, 1_000, 0, 5_000), transfer(1, 3, 1_000, 1, 5_000)]
-      {:ok, block, s2} = Block.build(s, proposer, signers, txs)
+      {:ok, block, s2} = Block.build(s, proposer, signers, txs, 1_000)
 
       assert State.total_balances(s2) == State.supply(s2)
       # taxa total 10_000 / 3 = 3_333, sobra 1 para o proponente
@@ -177,17 +177,48 @@ defmodule BrdcLedger.LedgerTest do
     test "bloco com uma transação inválida é recusado inteiro", %{s: s} do
       proposer = addr(50)
       bad = [transfer(1, 2, 1, 0), transfer(1, 2, 1, 7)]
-      assert {:error, {:invalid_tx, _, :bad_nonce}} = Block.build(s, proposer, [proposer], bad)
+
+      assert {:error, {:invalid_tx, _, :bad_nonce}} =
+               Block.build(s, proposer, [proposer], bad, 1_000)
     end
 
     test "sem bloco vazio, altura e prev_hash conferidos, state_root adulterado recusado", %{s: s} do
       proposer = addr(50)
-      assert {:error, :empty_block} = Block.build(s, proposer, [proposer], [])
-      {:ok, block, _} = Block.build(s, proposer, [proposer], [transfer(1, 2, 1, 0)])
+      assert {:error, :empty_block} = Block.build(s, proposer, [proposer], [], 1_000)
+      {:ok, block, _} = Block.build(s, proposer, [proposer], [transfer(1, 2, 1, 0)], 1_000)
       assert {:error, :bad_state_root} = Block.apply(s, %{block | state_root: <<0::256>>})
       assert {:error, :bad_height} = Block.apply(s, %{block | height: 5})
       assert {:error, :bad_prev_hash} = Block.apply(s, %{block | prev_hash: <<1::256>>})
       assert {:error, :proposer_not_signer} = Block.apply(s, %{block | signers: [addr(51)]})
+    end
+
+    test "o horário do bloco vira o `agora` do estado, não decresce e entra no hash e na raiz", %{
+      s: s
+    } do
+      proposer = addr(50)
+      {:ok, b1, s1} = Block.build(s, proposer, [proposer], [transfer(1, 2, 1, 0)], 5_000)
+      assert s1.time == 5_000
+      assert {:ok, ^s1} = Block.apply(s, b1)
+
+      # o mesmo bloco com outro horário tem outro hash e outra raiz
+      {:ok, b2, s2} = Block.build(s, proposer, [proposer], [transfer(1, 2, 1, 0)], 5_001)
+      refute Block.hash(b1) == Block.hash(b2)
+      refute State.root(s1) == State.root(s2)
+
+      # o horário não pode voltar
+      assert {:error, :time_goes_back} =
+               Block.build(s1, proposer, [proposer], [transfer(1, 2, 1, 1)], 4_999)
+
+      # igual ao anterior é permitido (vários blocos no mesmo segundo)
+      assert {:ok, _, _} = Block.build(s1, proposer, [proposer], [transfer(1, 2, 1, 1)], 5_000)
+    end
+
+    test "horário plausível: não volta e não passa da margem do relógio local (ADR-0016)" do
+      assert Block.plausible_time?(100, 90, 100)
+      assert Block.plausible_time?(115, 90, 100)
+      refute Block.plausible_time?(116, 90, 100)
+      refute Block.plausible_time?(89, 90, 100)
+      assert Block.plausible_time?(130, 90, 100, 30)
     end
 
     test "raiz de estado é determinística e muda com qualquer saldo", %{s: s} do
@@ -238,6 +269,18 @@ defmodule BrdcLedger.LedgerTest do
   end
 
   describe "parâmetros" do
+    test "janelas ficam entre o mínimo e o máximo (ADR-0016)" do
+      pub = Ed25519.public_key(seed(1))
+      ok = [chain_id: "x", issuers: [pub], threshold: 1]
+      assert {:ok, p} = Params.new(ok)
+      assert p.contest_window == 86_400 and p.veto_window == 172_800
+      assert {:ok, _} = Params.new(ok ++ [contest_window: 60, veto_window: 60, min_window: 1])
+      assert {:error, :bad_windows} = Params.new(ok ++ [contest_window: 10])
+      assert {:error, :bad_windows} = Params.new(ok ++ [veto_window: 99_999_999_999])
+      assert {:error, :bad_windows} = Params.new(ok ++ [min_window: 0])
+      assert {:error, :bad_windows} = Params.new(ok ++ [min_window: 100, max_window: 50])
+    end
+
     test "limite precisa caber no conjunto e emissores são distintos" do
       pub = Ed25519.public_key(seed(1))
       assert {:error, :bad_threshold} = Params.new(chain_id: "x", issuers: [pub], threshold: 2)

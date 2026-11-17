@@ -103,7 +103,7 @@ defmodule BrdcLedger.PropertiesTest do
       doc = Tx.issuance_doc(:mint, @chain, addr(1), amt, "x")
       ap = for k <- [101, 102], do: Tx.approval(doc, seed(k))
       t = signed(2, 9, 0, 0, Tx.issuance_payload(addr(1), amt, "x", ap))
-      {:ok, b1, s1} = Block.build(base(), addr(50), [addr(50)], [t])
+      {:ok, b1, s1} = Block.build(base(), addr(50), [addr(50)], [t], 1_000)
       {:ok, s2} = Block.apply(base(), b1)
       assert State.root(s1) == State.root(s2)
     end

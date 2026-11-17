@@ -1,6 +1,6 @@
 # BRDC — contexto persistente
 
-**BRDC** (Brazilian Decentralized Coin) é um projeto de estudo: uma **stablecoin brasileira** (1 BRDC = 1 BRL, estilo USDC/USDT) numa blockchain própria em **Elixir**, com **contratos inteligentes nativos** (transferência de propriedade, credenciais como CNH, identificação, certidão de casamento e de divórcio, contratos entre partes), rede **P2P** de validadores e uma **carteira web não custodial** (hot wallet estilo MetaMask/Proton, com BIP-39 e passphrase como 25ª palavra). **Votos ficam fora do escopo por ora.**
+**BRDC** (Brazilian Decentralized Coin) é um projeto de estudo: uma **stablecoin brasileira** (1 BRDC = 1 BRL, estilo USDC/USDT) numa blockchain própria em **Elixir**, com **contratos inteligentes nativos** (transferência de propriedade, credenciais como CNH, identificação, certidão de casamento e de divórcio, contratos entre partes), rede **P2P** de validadores e uma **carteira web de autocustódia (não custodial)** (hot wallet estilo MetaMask/Proton, com BIP-39 e passphrase como 25ª palavra). **Votos ficam fora do escopo por ora.**
 
 O dono do produto quer **entender tudo**: a documentação não é apêndice, é parte da entrega de cada fase.
 
@@ -85,6 +85,9 @@ make              # lista os atalhos
 
 - **Mix tasks locais** (`mix brdc.*`, app `brdc_dev`, como no `brdid`) para subir a devnet, criar carteira, enviar, simular blocos e conferir tudo; cada fase entrega as suas. `mix brdc.check` será o portão de qualidade e inclui `docs.check` com **execução dos exemplos `elixir`** dos docs.
 - **OTP e desempenho:** usar GenServer, Registry, ETS, `Task.async_stream`, e **avaliar** GenStage/Broadway/Flow/Reactor onde fizerem sentido (nas bordas de I/O e na validação em paralelo), **nunca** no caminho determinístico do ledger nem dentro do motor de consenso. Ver `docs/concepts/09-otp-and-performance.md`. Toda biblioteca nova é justificada (supply chain) e medida (Benchee) antes.
+
+- **Revisão geral no fim da última fase** (pedido do dono): até lá, seguir o plano por fase sem refazer o que já foi aceito; ao fim, analisar tudo (segurança, desenho, documentação, simplificações).
+- **Carteira = autocustódia** (não custodial): só o usuário guarda as chaves; a decisão sobre guardar a passphrase no cofre fica para a Fase 6 (recomendação: nunca guardar).
 
 ## Fora de escopo por ora
 

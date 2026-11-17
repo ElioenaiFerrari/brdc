@@ -19,6 +19,9 @@ Cada decisão de segurança ou produto vira um ADR: contexto, decisão, alternat
 | [0013](0013-governance-of-issuers-and-validators.md) | Governança de emissores e validadores (P1) | Aceito |
 | [0014](0014-fee-table-and-no-halving.md) | Tabela de taxas, repartição e sem halving (P2) | Aceito |
 | [0015](0015-p2p-over-mutual-tls-1-3.md) | Canal P2P: TLS 1.3 mútuo com chave fixada, só OTP (P6, parte de rede) | Aceito |
+| [0016](0016-block-time-and-windows-in-seconds.md) | Tempo do bloco e janelas em segundos (P4) | Aceito |
+| [0017](0017-initial-contract-catalog.md) | Catálogo inicial de contratos entre partes (P5) | Aceito |
+| [0018](0018-assets-direct-trade-with-veto-window.md) | Bens: classes com órgão, negociação direta e janela de veto | Aceito |
 
 ## Decisões PENDENTES (esperam o dono do produto)
 Nada abaixo entra em código antes da resposta.
@@ -28,8 +31,8 @@ Nada abaixo entra em código antes da resposta.
 | P1 | ~~Governança inicial~~ → proposta no [ADR-0013](0013-governance-of-issuers-and-validators.md), aceito | Fases 2 e 3 |
 | P2 | ~~Tabela de taxas~~ → proposta no [ADR-0014](0014-fee-table-and-no-halving.md), aceito | Fase 2 |
 | P3 | **Tempo de agrupamento de blocos** (o intervalo antes de fechar um bloco com transações pendentes) | Fase 3 |
-| P4 | **Janelas** de contestação e veto padrão para bens e credenciais | Fase 5 |
-| P5 | **Catálogo inicial de contratos entre partes** (compra e venda, aluguel, empréstimo…) e seus parâmetros | Fase 5 |
+| P4 | ~~Janelas~~ → resolvida no [ADR-0016](0016-block-time-and-windows-in-seconds.md) | Fase 5 |
+| P5 | ~~Catálogo de contratos~~ → resolvida no [ADR-0017](0017-initial-contract-catalog.md) | Fase 5 |
 | P6 | ~~Biblioteca Noise~~ → resolvida no [ADR-0015](0015-p2p-over-mutual-tls-1-3.md) (TLS 1.3 do OTP). **Falta:** biblioteca de Ed25519 no navegador (justificar supply chain) | Fase 6 |
 | P7 | **Bibliotecas OTP por cenário** (GenStage, Broadway, Flow, Reactor, Benchee, Telemetry…): quais entram, onde e por quê, cada uma com justificativa de supply chain | Fases 2, 3, 4 e 7 |
 

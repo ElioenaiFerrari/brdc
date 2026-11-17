@@ -17,7 +17,12 @@ defmodule BrdcLedger.State do
             burned: 0,
             refs: MapSet.new(),
             attestation: nil,
+            classes: %{},
+            assets: %{},
+            deals: %{},
+            escrow: 0,
             height: 0,
+            time: 0,
             last_hash: nil
 
   @type account :: %{balance: non_neg_integer(), nonce: non_neg_integer()}
@@ -27,8 +32,13 @@ defmodule BrdcLedger.State do
           minted: non_neg_integer(),
           burned: non_neg_integer(),
           refs: MapSet.t({atom(), String.t()}),
+          classes: %{String.t() => map()},
+          assets: %{String.t() => map()},
+          deals: %{String.t() => map()},
+          escrow: non_neg_integer(),
           attestation: nil | %{seq: pos_integer(), reserve: non_neg_integer(), ref: String.t()},
           height: non_neg_integer(),
+          time: non_neg_integer(),
           last_hash: nil | <<_::256>>
         }
 
@@ -48,6 +58,10 @@ defmodule BrdcLedger.State do
   @spec total_balances(t()) :: non_neg_integer()
   def total_balances(%__MODULE__{accounts: a}),
     do: a |> Map.values() |> Enum.reduce(0, &(&1.balance + &2))
+
+  @doc "Saldos + escrow: tudo o que está em circulação (igual a emitido − queimado)."
+  @spec total_held(t()) :: non_neg_integer()
+  def total_held(%__MODULE__{escrow: e} = s), do: total_balances(s) + e
 
   @doc "Oferta em circulação = emitido − queimado."
   @spec supply(t()) :: non_neg_integer()
@@ -96,7 +110,22 @@ defmodule BrdcLedger.State do
     Hash.tagged(
       "brdc/state",
       Encoding.encode(
-        [:u64, :u64, :u64, {:fixed, 32}, :u64, {:fixed, 32}, :u64, :u64, :string],
+        [
+          :u64,
+          :u64,
+          :u64,
+          {:fixed, 32},
+          :u64,
+          {:fixed, 32},
+          :u64,
+          :u64,
+          :string,
+          :u64,
+          {:fixed, 32},
+          {:fixed, 32},
+          {:fixed, 32},
+          :u64
+        ],
         [
           s.minted,
           s.burned,
@@ -105,9 +134,62 @@ defmodule BrdcLedger.State do
           length(ref_leaves),
           merkle(ref_leaves)
         ] ++
-          attestation_fields(s.attestation)
+          attestation_fields(s.attestation) ++
+          [
+            s.time,
+            merkle(class_leaves(s)),
+            merkle(asset_leaves(s)),
+            merkle(deal_leaves(s)),
+            s.escrow
+          ]
       )
     )
+  end
+
+  defp class_leaves(s) do
+    for {id, c} <- Enum.sort(s.classes) do
+      Hash.tagged(
+        "brdc/state/class",
+        Encoding.encode(
+          [:string, {:list, {:fixed, 32}}, :u32, :u64],
+          [id, c.organ, c.threshold, c.veto_window]
+        )
+      )
+    end
+  end
+
+  defp asset_leaves(s) do
+    for {id, a} <- Enum.sort(s.assets) do
+      liens =
+        for {lid, ref} <- Enum.sort(a.liens), do: Encoding.encode([:string, :string], [lid, ref])
+
+      Hash.tagged(
+        "brdc/state/asset",
+        Encoding.encode(
+          [:string, :string, {:fixed, 32}, :bytes, :u64, {:list, :bytes}],
+          [id, a.class, a.owner, a.meta, a.rev, liens]
+        )
+      )
+    end
+  end
+
+  defp deal_leaves(s) do
+    for {id, d} <- Enum.sort(s.deals) do
+      Hash.tagged(
+        "brdc/state/deal",
+        Encoding.encode(
+          [:string, {:fixed, 32}, {:fixed, 32}, :u64, :u8, :u64],
+          [
+            id,
+            d.seller,
+            d.buyer,
+            d.price,
+            if(d.status == :offered, do: 0, else: 1),
+            d.deadline || 0
+          ]
+        )
+      )
+    end
   end
 
   defp attestation_fields(nil), do: [0, 0, ""]

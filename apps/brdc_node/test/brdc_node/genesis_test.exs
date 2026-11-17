@@ -29,6 +29,11 @@ defmodule BrdcNode.GenesisTest do
     assert Genesis.hash(g) == Genesis.hash(g!())
   end
 
+  test "autoridades e taxas de bens sobrevivem à ida e volta do JSON" do
+    g = g!(authorities: [key(20), key(21)], authority_threshold: 2, asset_step_fee: 33)
+    assert {:ok, ^g} = Genesis.from_json(Genesis.to_json(g))
+  end
+
   test "qualquer campo diferente muda o hash (redes diferentes se recusam)" do
     h = Genesis.hash(g!())
 
@@ -42,6 +47,14 @@ defmodule BrdcNode.GenesisTest do
           [per_byte: 2],
           [max_block_txs: 10],
           [max_block_bytes: 1_000],
+          [authorities: [key(20)]],
+          [authorities: [key(20), key(21)], authority_threshold: 2],
+          [asset_register_fee: 1],
+          [asset_step_fee: 1],
+          [contest_window: 120],
+          [veto_window: 120],
+          [min_window: 30],
+          [max_window: 1_000_000],
           [bootstrap: []]
         ] do
       refute Genesis.hash(g!(o)) == h, "esperava hash diferente para #{inspect(o)}"
@@ -64,6 +77,19 @@ defmodule BrdcNode.GenesisTest do
     assert {:error, :bad_threshold} = Genesis.new(base(threshold: 0))
     assert {:error, :bad_fees} = Genesis.new(base(per_byte: -1))
     assert {:error, :bad_block_limits} = Genesis.new(base(max_block_txs: 0))
+    assert {:error, :bad_authorities} = Genesis.new(base(authorities: [key(20), key(20)]))
+
+    assert {:error, :bad_authorities} =
+             Genesis.new(base(authorities: [key(20)], authority_threshold: 2))
+
+    assert {:error, :bad_authorities} = Genesis.new(base(authorities: [<<1>>]))
+    assert {:error, :bad_fees} = Genesis.new(base(asset_step_fee: -1))
+    assert {:ok, _} = Genesis.new(base(authorities: [key(20), key(21)], authority_threshold: 2))
+    assert {:error, :bad_windows} = Genesis.new(base(contest_window: 10))
+    assert {:error, :bad_windows} = Genesis.new(base(veto_window: 99_999_999_999))
+    assert {:error, :bad_windows} = Genesis.new(base(min_window: 0))
+    assert {:error, :bad_windows} = Genesis.new(base(min_window: 100, max_window: 50))
+    assert {:ok, _} = Genesis.new(base(contest_window: 60, veto_window: 60, min_window: 1))
 
     assert {:error, :bad_bootstrap} =
              Genesis.new(base(bootstrap: [%{validator: key(99), host: "a.b", port: 1}]))
@@ -99,6 +125,14 @@ defmodule BrdcNode.GenesisTest do
              p.per_byte == 2
 
     assert p.issuers == [key(10), key(11)]
+    assert p.contest_window == 86_400 and p.veto_window == 172_800
+
+    withauth = Genesis.ledger_params(g!(authorities: [key(20), key(21)], authority_threshold: 2))
+    assert withauth.authorities == [key(20), key(21)] and withauth.authority_threshold == 2
+    assert withauth.asset_register_fee == 50_000 and withauth.asset_step_fee == 20_000
+
+    short = Genesis.ledger_params(g!(contest_window: 60, veto_window: 60))
+    assert short.contest_window == 60 and short.veto_window == 60
 
     cfg = Genesis.channel_config(g, key(1))
     assert cfg.genesis_hash == Genesis.hash(g) and cfg.validators.() == g.validators
