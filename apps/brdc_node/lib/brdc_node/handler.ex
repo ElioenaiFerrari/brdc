@@ -6,14 +6,14 @@ defmodule BrdcNode.Handler do
   - `:status` → `[chain_id, altura, horário, oferta, hash do último bloco, pendentes, taxa-base, taxa por byte]`
   - `:get_account` (corpo: 32 bytes do endereço) → `[saldo, nonce, saldo com pendentes, nonce com pendentes]`
   - `:submit_tx` (corpo: transação assinada) → id de 32 bytes, ou o motivo da recusa
-  - `:query` (`<<1, endereço>>` contratos · `<<2, endereço>>` credenciais do titular · `<<3, chave pública>>` tipos cujo órgão inclui a chave)
-  - `:proposal` (`<<1, campos>>` propõe emissão · `<<2, id, aprovação>>` aprova · `<<3, chave pública>>` lista as dos seus órgãos)
+  - `:query` (`<<1, endereço>>` contratos · `<<2, endereço>>` credenciais do titular · `<<3, chave pública>>` tipos cujo órgão inclui a chave · `<<4, endereço>>` bens · `<<5, chave pública>>` classes do órgão · `<<6, chave pública>>` bens das classes do órgão)
+  - `:proposal` (`<<1, tipo, campos>>` propõe (emissão, registro, veto, gravame) · `<<2, id, aprovação>>` aprova · `<<3, chave pública>>` lista as dos seus órgãos)
   - `:get_block` → ainda não suportado (o bloco não tem codificação de rede)
   """
   alias BrdcCrypto.Encoding
-  alias BrdcNode.Node
+  alias BrdcNode.{Node, Proposals}
 
-  @status [:string, :u64, :u64, :u64, :bytes, :u32, :u64, :u64, :u64, :u64, :u64]
+  @status [:string, :u64, :u64, :u64, :bytes, :u32, :u64, :u64, :u64, :u64, :u64, :u64]
   @contract [
     :string,
     :string,
@@ -27,9 +27,24 @@ defmodule BrdcNode.Handler do
   @kv [:string, :u64]
   @cred [:string, :string, {:fixed, 32}, :bytes, :string, :string, :u64, :u64, :u64]
   @type_entry [:string, :u32, :u32, :u8, :u64, :u64, :string]
-  @proposal [:bytes, :string, :string, {:fixed, 32}, :bytes, :string, {:list, :bytes}, :u32]
+  @proposal [:bytes, :string, :bytes, {:list, :bytes}, :u32]
   @fields [:string, :string, {:fixed, 32}, :bytes, :string]
-  @asset [:string, :string, :bytes, :u32, :u32, :string, :string, {:fixed, 32}, :u64, :u64, :u64]
+  @asset [
+    :string,
+    :string,
+    :bytes,
+    :u32,
+    {:fixed, 32},
+    {:list, :string},
+    {:list, :string},
+    :string,
+    :string,
+    {:fixed, 32},
+    :u64,
+    :u64,
+    :u64
+  ]
+  @class [:string, :u32, :u32, :u64]
   @max_listed 100
   @max_contracts 100
   @account [:u64, :u64, :u64, :u64]
@@ -55,7 +70,8 @@ defmodule BrdcNode.Handler do
        s.per_byte,
        s.contract_fee,
        s.credential_fee,
-       s.asset_step_fee
+       s.asset_step_fee,
+       s.asset_register_fee
      ])}
   end
 
@@ -129,38 +145,30 @@ defmodule BrdcNode.Handler do
     {:ok, Encoding.encode([{:list, :bytes}], [entries])}
   end
 
-  def handle(node, :query, <<4, addr::binary-size(32)>>) do
+  def handle(node, :query, <<4, addr::binary-size(32)>>),
+    do: {:ok, asset_list(Node.assets_of(node, addr))}
+
+  def handle(node, :query, <<5, pub::binary-size(32)>>) do
     entries =
       node
-      |> Node.assets_of(addr)
+      |> Node.classes_for(pub)
       |> Enum.take(@max_listed)
-      |> Enum.map(fn a ->
-        {status, other, price, deadline} = deal_fields(a)
-
-        Encoding.encode(@asset, [
-          a.id,
-          a.class,
-          a.meta,
-          a.rev,
-          a.liens,
-          a.role,
-          status,
-          other,
-          price,
-          deadline,
-          a.veto_window
-        ])
+      |> Enum.map(fn c ->
+        Encoding.encode(@class, [c.id, c.threshold, length(c.organ), c.veto_window])
       end)
 
     {:ok, Encoding.encode([{:list, :bytes}], [entries])}
   end
 
+  def handle(node, :query, <<6, pub::binary-size(32)>>),
+    do: {:ok, asset_list(Node.organ_assets(node, pub))}
+
   def handle(_node, :query, _), do: {:error, :bad_query}
 
-  def handle(node, :proposal, <<1, rest::binary>>) do
-    with {:ok, [type, id, subject, data, ref]} <- Encoding.decode(@fields, rest),
-         {:ok, pid} <-
-           Node.propose(node, %{type: type, id: id, subject: subject, data: data, ref: ref}) do
+  def handle(node, :proposal, <<1, kind_n, rest::binary>>) do
+    with {:ok, kind} <- Proposals.kind_from_number(kind_n),
+         {:ok, fields} <- Proposals.decode_fields(kind, rest),
+         {:ok, pid} <- Node.propose(node, kind, fields) do
       {:ok, pid}
     else
       {:error, reason} when is_atom(reason) -> {:error, reason}
@@ -181,15 +189,10 @@ defmodule BrdcNode.Handler do
       |> Node.proposals_for(pub)
       |> Enum.take(@max_listed)
       |> Enum.map(fn p ->
-        f = p.fields
-
         Encoding.encode(@proposal, [
           p.id,
-          f.type,
-          f.id,
-          f.subject,
-          f.data,
-          f.ref,
+          Atom.to_string(p.kind),
+          Proposals.encode_fields(p.kind, p.fields),
           p.approvals,
           p.threshold
         ])
@@ -232,6 +235,8 @@ defmodule BrdcNode.Handler do
   @doc false
   def type_schema, do: @type_entry
   @doc false
+  def class_schema, do: @class
+  @doc false
   def proposal_schema, do: @proposal
   @doc false
   def fields_schema, do: @fields
@@ -247,9 +252,36 @@ defmodule BrdcNode.Handler do
   defp deal_fields(%{deal: nil}), do: {"none", <<0::256>>, 0, 0}
 
   defp deal_fields(%{deal: d, role: role}) do
-    other = if role == "owner", do: d.buyer, else: d.seller
+    other = if role == "buyer", do: d.seller, else: d.buyer
     {Atom.to_string(d.status), other, d.price, d.deadline || 0}
   end
 
   # proposta de assinatura coletiva: `<<1, campos>>` propõe, `<<2, id, aprovação>>` aprova, `<<3, chave>>` lista
+
+  defp asset_list(assets) do
+    entries =
+      assets
+      |> Enum.take(@max_listed)
+      |> Enum.map(fn a ->
+        {status, other, price, deadline} = deal_fields(a)
+
+        Encoding.encode(@asset, [
+          a.id,
+          a.class,
+          a.meta,
+          a.rev,
+          a.owner,
+          a.lien_ids,
+          a.lien_refs,
+          a.role,
+          status,
+          other,
+          price,
+          deadline,
+          a.veto_window
+        ])
+      end)
+
+    Encoding.encode([{:list, :bytes}], [entries])
+  end
 end

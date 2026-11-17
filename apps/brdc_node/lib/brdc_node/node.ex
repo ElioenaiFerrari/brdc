@@ -62,7 +62,20 @@ defmodule BrdcNode.Node do
 
   @doc "Propõe uma emissão de credencial para assinatura coletiva (os campos; o documento é recalculado)."
   @spec propose(GenServer.server(), Proposals.fields()) :: {:ok, <<_::256>>} | {:error, atom()}
-  def propose(node, fields), do: GenServer.call(node, {:propose, fields})
+  def propose(node, fields), do: propose(node, :credential_issue, fields)
+
+  @doc "Propõe uma ação de órgão (`Proposals.kinds/0`) para assinatura coletiva."
+  @spec propose(GenServer.server(), Proposals.kind(), Proposals.fields()) ::
+          {:ok, <<_::256>>} | {:error, atom()}
+  def propose(node, kind, fields), do: GenServer.call(node, {:propose, kind, fields})
+
+  @doc "Classes de bens cujo órgão inclui a chave pública."
+  @spec classes_for(GenServer.server(), <<_::256>>) :: [map()]
+  def classes_for(node, pub), do: GenServer.call(node, {:classes_for, pub})
+
+  @doc "Bens das classes cujo órgão inclui a chave pública (para propor veto e gravames)."
+  @spec organ_assets(GenServer.server(), <<_::256>>) :: [map()]
+  def organ_assets(node, pub), do: GenServer.call(node, {:organ_assets, pub})
 
   @doc "Aprovação de um membro (`chave ‖ assinatura`) a uma proposta. Devolve quantas aprovações há."
   @spec approve(GenServer.server(), <<_::256>>, binary()) ::
@@ -131,6 +144,7 @@ defmodule BrdcNode.Node do
        contract_fee: st.params.contract_fee,
        credential_fee: st.params.credential_fee,
        asset_step_fee: st.params.asset_step_fee,
+       asset_register_fee: st.params.asset_register_fee,
        genesis_hash: Genesis.hash(s.genesis)
      }, s}
   end
@@ -160,18 +174,7 @@ defmodule BrdcNode.Node do
 
     mine =
       for {id, a} <- Enum.sort(st.assets), a.owner == addr or buying?(st.deals[id], addr) do
-        role = if a.owner == addr, do: "owner", else: "buyer"
-
-        %{
-          id: id,
-          class: a.class,
-          meta: a.meta,
-          rev: a.rev,
-          liens: map_size(a.liens),
-          role: role,
-          deal: st.deals[id],
-          veto_window: st.classes[a.class].veto_window
-        }
+        asset_view(st, id, a, if(a.owner == addr, do: "owner", else: "buyer"))
       end
 
     {:reply, mine, s}
@@ -182,22 +185,38 @@ defmodule BrdcNode.Node do
      for({id, t} <- Enum.sort(s.state.cred_types), pub in t.organ, do: Map.put(t, :id, id)), s}
   end
 
-  def handle_call({:propose, fields}, _from, s) do
-    case Proposals.put(s.proposals, s.state, fields) do
+  def handle_call({:propose, kind, fields}, _from, s) do
+    case Proposals.put(s.proposals, view(s), kind, fields) do
       {:ok, store, id} -> {:reply, {:ok, id}, %{s | proposals: store}}
       {:error, _} = err -> {:reply, err, s}
     end
   end
 
+  def handle_call({:classes_for, pub}, _from, s) do
+    {:reply, for({id, c} <- Enum.sort(s.state.classes), pub in c.organ, do: Map.put(c, :id, id)),
+     s}
+  end
+
+  def handle_call({:organ_assets, pub}, _from, s) do
+    st = s.state
+
+    mine =
+      for {id, a} <- Enum.sort(st.assets), pub in st.classes[a.class].organ do
+        asset_view(st, id, a, "class")
+      end
+
+    {:reply, mine, s}
+  end
+
   def handle_call({:approve, id, approval}, _from, s) do
-    case Proposals.approve(s.proposals, s.state, id, approval) do
+    case Proposals.approve(s.proposals, view(s), id, approval) do
       {:ok, store, n} -> {:reply, {:ok, n}, %{s | proposals: store}}
       {:error, _} = err -> {:reply, err, s}
     end
   end
 
   def handle_call({:proposals_for, pub}, _from, s) do
-    {:reply, Proposals.list_for(s.proposals, s.state, pub), s}
+    {:reply, Proposals.list_for(s.proposals, view(s), pub), s}
   end
 
   def handle_call({:submit, bin}, _from, s) do
@@ -252,11 +271,29 @@ defmodule BrdcNode.Node do
   defp arm(%{timer: t} = s) when t != nil, do: s
   defp arm(s), do: %{s | timer: Process.send_after(self(), :produce, s.interval)}
 
+  defp asset_view(st, id, a, role) do
+    %{
+      id: id,
+      class: a.class,
+      meta: a.meta,
+      rev: a.rev,
+      owner: a.owner,
+      lien_ids: a.liens |> Map.keys() |> Enum.sort(),
+      lien_refs: a.liens |> Enum.sort() |> Enum.map(&elem(&1, 1)),
+      role: role,
+      deal: st.deals[id],
+      veto_window: st.classes[a.class].veto_window
+    }
+  end
+
   defp buying?(nil, _addr), do: false
   defp buying?(deal, addr), do: deal.buyer == addr
 
   # sem blocos vazios, o horário do último bloco fica parado; o próximo bloco usa o relógio (nunca menos que o último).
   # A transação é conferida nesse horário (senão uma janela já vencida pareceria aberta).
+  # estado confirmado no horário do próximo bloco (para propostas com prazo, como o veto)
+  defp view(s), do: %{s.state | time: max(s.clock.(), s.state.time)}
+
   defp at_next_block(s), do: %{s.pending_state | time: max(s.clock.(), s.state.time)}
 
   defp produce_block(%{mempool: []} = s), do: {:nothing, s}

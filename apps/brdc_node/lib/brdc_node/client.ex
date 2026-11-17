@@ -5,7 +5,7 @@ defmodule BrdcNode.Client do
   chegam quando o nó tiver mais de um validador.
   """
   alias BrdcCrypto.Encoding
-  alias BrdcNode.Handler
+  alias BrdcNode.{Handler, Proposals}
   alias BrdcP2p.PublicPort
 
   @type endpoint :: {charlist() | :inet.ip_address(), :inet.port_number()}
@@ -25,7 +25,8 @@ defmodule BrdcNode.Client do
             per_byte,
             contract_fee,
             credential_fee,
-            asset_step_fee
+            asset_step_fee,
+            asset_register_fee
           ]} <-
            Encoding.decode(Handler.status_schema(), bin) do
       {:ok,
@@ -40,7 +41,8 @@ defmodule BrdcNode.Client do
          per_byte: per_byte,
          contract_fee: contract_fee,
          credential_fee: credential_fee,
-         asset_step_fee: asset_step_fee
+         asset_step_fee: asset_step_fee,
+         asset_register_fee: asset_register_fee
        }}
     else
       {:error, _} = err -> err
@@ -147,34 +149,57 @@ defmodule BrdcNode.Client do
 
   @doc "Bens que o endereço possui ou está comprando, com a negociação em curso."
   @spec assets_of(endpoint(), <<_::256>>) :: {:ok, [map()]} | {:error, term()}
-  def assets_of({host, port}, <<_::256>> = addr) do
-    list_query(host, port, :query, <<4, addr::binary>>, Handler.asset_schema(), fn [
-                                                                                     id,
-                                                                                     class,
-                                                                                     meta,
-                                                                                     rev,
-                                                                                     liens,
-                                                                                     role,
-                                                                                     status,
-                                                                                     other,
-                                                                                     price,
-                                                                                     deadline,
-                                                                                     window
-                                                                                   ] ->
-      %{
-        id: id,
-        class: class,
-        meta: meta,
-        rev: rev,
-        liens: liens,
-        role: role,
-        deal: status,
-        other: other,
-        price: price,
-        deadline: deadline,
-        veto_window: window
-      }
+  def assets_of({host, port}, <<_::256>> = addr),
+    do: list_query(host, port, :query, <<4, addr::binary>>, Handler.asset_schema(), &asset_map/1)
+
+  @doc "Bens das classes cujo órgão inclui a chave pública (para propor veto e gravames)."
+  @spec organ_assets(endpoint(), <<_::256>>) :: {:ok, [map()]} | {:error, term()}
+  def organ_assets({host, port}, <<_::256>> = pub),
+    do: list_query(host, port, :query, <<6, pub::binary>>, Handler.asset_schema(), &asset_map/1)
+
+  @doc "Classes de bens cujo órgão inclui a chave pública."
+  @spec classes_for(endpoint(), <<_::256>>) :: {:ok, [map()]} | {:error, term()}
+  def classes_for({host, port}, <<_::256>> = pub) do
+    list_query(host, port, :query, <<5, pub::binary>>, Handler.class_schema(), fn [
+                                                                                    id,
+                                                                                    threshold,
+                                                                                    size,
+                                                                                    window
+                                                                                  ] ->
+      %{id: id, threshold: threshold, organ_size: size, veto_window: window}
     end)
+  end
+
+  defp asset_map([
+         id,
+         class,
+         meta,
+         rev,
+         owner,
+         lien_ids,
+         lien_refs,
+         role,
+         status,
+         other,
+         price,
+         deadline,
+         window
+       ]) do
+    %{
+      id: id,
+      class: class,
+      meta: meta,
+      rev: rev,
+      owner: owner,
+      lien_ids: lien_ids,
+      lien_refs: lien_refs,
+      role: role,
+      deal: status,
+      other: other,
+      price: price,
+      deadline: deadline,
+      veto_window: window
+    }
   end
 
   @doc "Tipos de credencial cujo órgão inclui a chave pública (quem pode assinar emissões)."
@@ -203,13 +228,17 @@ defmodule BrdcNode.Client do
 
   @doc "Propõe uma emissão de credencial (campos); devolve o id da proposta."
   @spec propose(endpoint(), map()) :: {:ok, <<_::256>>} | {:error, term()}
-  def propose({host, port}, %{type: t, id: id, subject: s, data: d, ref: r}) do
-    body = <<1>> <> Encoding.encode(Handler.fields_schema(), [t, id, s, d, r])
+  def propose(endpoint, fields), do: propose(endpoint, :credential_issue, fields)
+
+  @doc "Propõe uma ação de órgão (`BrdcNode.Proposals.kinds/0`); devolve o id da proposta."
+  @spec propose(endpoint(), Proposals.kind(), map()) :: {:ok, <<_::256>>} | {:error, term()}
+  def propose({host, port}, kind, fields) do
+    body = <<1, Proposals.kind_number(kind)>> <> Proposals.encode_fields(kind, fields)
 
     case PublicPort.request(host, port, :proposal, body) do
       {:ok, <<_::256>> = pid} -> {:ok, pid}
       {:ok, _} -> {:error, :bad_response}
-      {:error, reason} when is_binary(reason) -> {:error, String.to_atom(reason)}
+      {:error, reason} when is_binary(reason) -> {:error, reason_atom(reason)}
       {:error, _} = err -> err
     end
   end
@@ -220,7 +249,7 @@ defmodule BrdcNode.Client do
     case PublicPort.request(host, port, :proposal, <<2, id::binary, approval::binary>>) do
       {:ok, <<n::32>>} -> {:ok, n}
       {:ok, _} -> {:error, :bad_response}
-      {:error, reason} when is_binary(reason) -> {:error, String.to_atom(reason)}
+      {:error, reason} when is_binary(reason) -> {:error, reason_atom(reason)}
       {:error, _} = err -> err
     end
   end
@@ -230,25 +259,39 @@ defmodule BrdcNode.Client do
   def proposals_for({host, port}, <<_::256>> = pub) do
     list_query(host, port, :proposal, <<3, pub::binary>>, Handler.proposal_schema(), fn [
                                                                                           id,
-                                                                                          type,
-                                                                                          cred_id,
-                                                                                          subject,
-                                                                                          data,
-                                                                                          ref,
+                                                                                          kind,
+                                                                                          fields,
                                                                                           approvals,
                                                                                           threshold
                                                                                         ] ->
-      %{
-        id: id,
-        type: type,
-        cred_id: cred_id,
-        subject: subject,
-        data: data,
-        ref: ref,
-        approvals: approvals,
-        threshold: threshold
-      }
+      kind = Enum.find(Proposals.kinds(), &(Atom.to_string(&1) == kind))
+      %{id: id, kind: kind, fields: fields, approvals: approvals, threshold: threshold}
     end)
+    |> decode_proposal_fields()
+  end
+
+  # os campos vêm codificados; decodifica por tipo (tipo desconhecido da rede vira erro, nunca átomo novo)
+  defp decode_proposal_fields({:ok, list}) do
+    Enum.reduce_while(list, {:ok, []}, fn p, {:ok, acc} ->
+      with kind when kind != nil <- p.kind,
+           {:ok, f} <- Proposals.decode_fields(kind, p.fields) do
+        {:cont, {:ok, [%{p | fields: f} | acc]}}
+      else
+        _ -> {:halt, {:error, :bad_response}}
+      end
+    end)
+    |> case do
+      {:ok, acc} -> {:ok, Enum.reverse(acc)}
+      err -> err
+    end
+  end
+
+  defp decode_proposal_fields(err), do: err
+
+  defp reason_atom(text) do
+    String.to_existing_atom(text)
+  rescue
+    ArgumentError -> :rejected
   end
 
   defp list_query(host, port, kind, body, schema, build) do
@@ -280,7 +323,7 @@ defmodule BrdcNode.Client do
     case PublicPort.request(host, port, :submit_tx, tx_bin) do
       {:ok, <<_::256>> = id} -> {:ok, id}
       {:ok, _} -> {:error, :bad_response}
-      {:error, reason} when is_binary(reason) -> {:error, String.to_atom(reason)}
+      {:error, reason} when is_binary(reason) -> {:error, reason_atom(reason)}
       {:error, _} = err -> err
     end
   end

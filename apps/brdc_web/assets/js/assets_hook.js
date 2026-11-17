@@ -69,7 +69,7 @@ export const Assets = {
   },
 
   state(a, now) {
-    const lien = a.liens > 0 ? " · com gravame" : "";
+    const lien = a.lien_ids.length > 0 ? " · com gravame" : "";
     if (a.deal === "none") return [a.role === "owner" ? `Seu${lien}` : "—", "green"];
     if (a.deal === "offered") return [a.role === "owner" ? "Oferta enviada" : "Oferta para você", "blue"];
     const done = now >= BigInt(a.deadline);
@@ -78,7 +78,7 @@ export const Assets = {
 
   actions(a, now) {
     const open = (step, extra = {}) => () => this.review(step, a, extra);
-    if (a.role === "owner" && a.deal === "none") return a.liens > 0 ? [] : [["Oferecer à venda", () => this.openOffer(a)]];
+    if (a.role === "owner" && a.deal === "none") return a.lien_ids.length > 0 ? [] : [["Oferecer à venda", () => this.openOffer(a)]];
     if (a.role === "owner" && a.deal === "offered") return [["Cancelar oferta", open("cancel")]];
     if (a.role === "buyer" && a.deal === "offered") return [["Aceitar e pagar", open("accept")]];
     if (a.deal === "accepted" && now >= BigInt(a.deadline)) return [["Finalizar venda", open("finalize")]];

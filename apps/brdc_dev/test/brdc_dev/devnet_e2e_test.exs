@@ -375,4 +375,73 @@ defmodule BrdcDev.DevnetE2ETest do
 
     assert {:ok, []} = Client.assets_of(endpoint, seller_hash)
   end
+
+  test "propostas de bens pela rede: registro por assinatura do órgão, com campos decodificados por tipo",
+       %{tmp_dir: dir} do
+    {devnet, node, endpoint} = boot(dir)
+    {:ok, member} = Account.from_mnemonic(@abandon, "m1")
+    {:ok, owner} = Account.from_mnemonic(@abandon, "dono")
+    {:ok, owner_hash} = Address.decode(owner.address)
+    {:ok, sender} = Account.from_mnemonic(@abandon, "remetente")
+    {:ok, sender_hash} = Address.decode(sender.address)
+    {:ok, status} = Client.status(endpoint)
+
+    {:ok, _} =
+      Authority.create_class(endpoint, devnet, %{
+        id: "imovel",
+        organ: [member.public_key],
+        veto_window: 5
+      })
+
+    {:ok, _} = Funding.mint(endpoint, devnet, sender_hash, 5_000_000)
+    Node.produce(node)
+
+    assert {:ok, [%{id: "imovel", threshold: 1, organ_size: 1}]} =
+             Client.classes_for(endpoint, member.public_key)
+
+    assert {:ok, []} = Client.classes_for(endpoint, owner.public_key)
+
+    f = %{class: "imovel", asset: "casa-7", owner: owner_hash, meta: "Rua B, 7"}
+    assert {:ok, pid} = Client.propose(endpoint, :asset_register, f)
+
+    assert {:error, :proposal_exists} =
+             Client.propose(endpoint, :asset_register, %{f | meta: "outra"})
+
+    assert {:error, :no_class} =
+             Client.propose(endpoint, :asset_register, %{f | class: "x", asset: "z"})
+
+    doc = Assets.register_doc(status.chain_id, f.class, f.asset, f.owner, f.meta)
+    assert {:ok, 1} = Client.approve(endpoint, pid, Approvals.approval(doc, member.seed))
+
+    assert {:ok, [p]} = Client.proposals_for(endpoint, member.public_key)
+    assert %{id: ^pid, kind: :asset_register, fields: ^f, threshold: 1} = p
+    assert {:ok, []} = Client.proposals_for(endpoint, owner.public_key)
+
+    {:ok, %{pending_nonce: nonce}} = Client.account(endpoint, sender_hash)
+    payload = Assets.register_payload(f.class, f.asset, f.owner, f.meta, p.approvals)
+
+    tx =
+      Tx.sign(
+        %Tx{
+          chain_id: status.chain_id,
+          kind: 6,
+          nonce: nonce,
+          fee: status.asset_register_fee,
+          sender_pub: sender.public_key,
+          payload: payload
+        },
+        sender.seed
+      )
+
+    assert {:ok, _} = Client.submit_tx(endpoint, Tx.encode(tx))
+    Node.produce(node)
+
+    assert {:ok, [%{id: "casa-7", role: "owner", lien_ids: [], lien_refs: []}]} =
+             Client.assets_of(endpoint, owner_hash)
+
+    assert {:ok, [%{id: "casa-7", role: "class"}]} =
+             Client.organ_assets(endpoint, member.public_key)
+
+    assert {:ok, []} = Client.proposals_for(endpoint, member.public_key)
+  end
 end

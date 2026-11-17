@@ -9,10 +9,21 @@ import { decodeAddress } from "./crypto/wallet.mjs";
 import {
   issueDoc, approve, issuePayload, proposalFields, describeIssue, idPayload, buildTx, commitment, KIND_ISSUE, KIND_CONTEST, KIND_ACTIVATE,
 } from "./crypto/proposals.mjs";
+import {
+  registerDoc, vetoDoc, lienAddDoc, lienRemoveDoc, registerPayload, vetoPayload, lienAddPayload, lienRemovePayload,
+  registerProposal, vetoProposal, lienAddProposal, lienRemoveProposal, describeOrganAction,
+  KIND_REGISTER, KIND_VETO, KIND_LIEN_ADD, KIND_LIEN_REMOVE,
+} from "./crypto/assets.mjs";
 
 const TYPE_LABEL = { cnh: "CNH", identidade: "Identificação", casamento: "Certidão de casamento", divorcio: "Certidão de divórcio" };
 const label = (t) => TYPE_LABEL[t] ?? t;
 export const ERRORS = {
+  asset_exists: "Já existe um bem com este id.",
+  no_class: "Classe de bens desconhecida.",
+  no_lien: "Gravame não encontrado neste bem.",
+  lien_exists: "Este gravame já existe neste bem.",
+  bad_id: "Id inválido (vazio, longo demais ou com caracteres não imprimíveis).",
+  bad_kind: "Tipo de proposta desconhecido.",
   not_owner: "Só o dono do bem pode fazer isto.",
   not_buyer: "Só o comprador indicado pode aceitar.",
   deal_active: "Já há uma negociação deste bem.",
@@ -25,8 +36,8 @@ export const ERRORS = {
   bad_nonce: "A conta mudou enquanto você revisava. Revise de novo.",
   not_subject: "Só o titular pode contestar.",
   bad_status: "A credencial já mudou de estado.",
-  window_closed: "A janela de contestação já terminou.",
-  window_open: "A janela de contestação ainda não terminou.",
+  window_closed: "O prazo já terminou (janela de contestação ou de veto).",
+  window_open: "O prazo ainda não terminou (janela de contestação ou de veto).",
   not_enough_approvals: "Ainda faltam assinaturas do órgão.",
   credential_exists: "Já existe uma credencial com este id.",
   proposal_exists: "Já há uma proposta para este id.",
@@ -204,22 +215,40 @@ export const Credentials = {
   },
 };
 
-// --- órgão: propor, assinar e emitir -------------------------------------------------------------
+// --- órgão: propor, assinar e emitir (credenciais e bens) ---------------------------------------
+
+const ACTIONS = {
+  credential_issue: "Emitir credencial",
+  asset_register: "Registrar bem",
+  asset_veto: "Vetar venda de bem",
+  lien_add: "Adicionar gravame",
+  lien_remove: "Remover gravame",
+};
+
+// campos de cada ação: [nome, rótulo, tipo ("text" | "type" | "class" | "asset")]
+const FORMS = {
+  credential_issue: [["type", "Tipo de credencial", "type"], ["holder", "Titular (endereço brdc1…)", "text"], ["data", "Dados", "text"], ["ref", "Referência (só se o tipo exige: id da credencial anterior)", "text"]],
+  asset_register: [["class", "Classe", "class"], ["asset", "Id do bem (ex.: casa-1)", "text"], ["owner", "Dono (endereço brdc1…)", "text"], ["meta", "Descrição do bem", "text"]],
+  asset_veto: [["asset", "Bem com venda em andamento", "asset"]],
+  lien_add: [["asset", "Bem", "asset"], ["lien", "Id do gravame (ex.: hipoteca-1)", "text"], ["ref", "Referência (contrato, processo…)", "text"]],
+  lien_remove: [["asset", "Bem", "asset"], ["lien", "Id do gravame a remover", "text"]],
+};
 
 export const Organ = {
   ...Base,
   mounted() {
-    this.reg = { types: [], proposals: [], public_key: "", time: "0" };
+    this.reg = { types: [], classes: [], organ_assets: [], proposals: [], public_key: "", time: "0" };
     this.draft = null;
+    this.fields = {};
     this.on("new", () => this.openNew());
     this.on("back", () => this.show("list"));
     this.on("propose", () => this.propose());
     this.on("confirm", () => this.draft?.run());
-    this.q("[data-role='type']").addEventListener("change", () => this.typeHelp());
+    this.q("[data-role='action']").addEventListener("change", () => this.drawForm());
     this.handleEvent("registry", (r) => {
-      const sig = JSON.stringify([r.types, r.proposals, r.public_key]);
+      const sig = JSON.stringify([r.types, r.classes, r.organ_assets, r.proposals, r.public_key]);
       this.reg = r;
-      this.el.hidden = r.types.length === 0;
+      this.el.hidden = r.types.length === 0 && r.classes.length === 0;
       if (sig === this.sig) return;
       this.sig = sig;
       if (!this.q("[data-step='list']").hidden) this.render();
@@ -234,23 +263,110 @@ export const Organ = {
   typeOf(id) {
     return this.reg.types.find((t) => t.id === id);
   },
+  assetOf(id) {
+    return this.reg.organ_assets.find((a) => a.id === id);
+  },
+  classOf(id) {
+    return this.reg.classes.find((c) => c.id === id);
+  },
 
   render() {
-    this.q("[data-role='types']").textContent = this.reg.types.map((t) => `${label(t.id)} (${t.threshold} de ${t.organ_size})`).join(", ");
+    const parts = [
+      ...this.reg.types.map((t) => `${label(t.id)} (${t.threshold} de ${t.organ_size})`),
+      ...this.reg.classes.map((c) => `bens da classe ${c.id} (${c.threshold} de ${c.organ_size})`),
+    ];
+    this.q("[data-role='types']").textContent = parts.join(", ");
     this.q("[data-role='empty']").hidden = this.reg.proposals.length > 0;
     const list = this.q("[data-role='list']");
     list.textContent = "";
     for (const p of this.reg.proposals) list.appendChild(this.card(p));
   },
 
+  // --- o que cada proposta é: título, linhas por extenso, documento e a transação final ---
+
+  resolve(p, chainId) {
+    const f = p.fields;
+    const fmt = (u) => formatFull(u);
+    switch (p.kind) {
+      case "credential_issue": {
+        const type = this.typeOf(f.type);
+        const data = unhex(f.data);
+        let text = "";
+        if (type?.privacy !== "private") {
+          try { text = fromUtf8(data); } catch { text = "(binário)"; }
+        }
+        return {
+          title: `${label(f.type)} · ${f.id}`,
+          lines: describeIssue({ typeLabel: label(f.type), id: f.id, subjectAddress: f.subject, dataText: text, privacy: type?.privacy ?? "public", ref: f.ref, threshold: p.threshold }),
+          doc: issueDoc({ chainId, type: f.type, id: f.id, subjectAddress: f.subject, data, ref: f.ref }),
+          tx: (approvals) => ({ kind: KIND_ISSUE, feeKey: "credential_fee", payload: issuePayload({ type: f.type, id: f.id, subjectAddress: f.subject, data, ref: f.ref, approvals }) }),
+        };
+      }
+      case "asset_register": {
+        const meta = unhex(f.meta);
+        const metaText = fromUtf8(meta);
+        return {
+          title: `Registrar ${f.asset}`,
+          lines: describeOrganAction("asset_register", { assetId: f.asset, cls: f.class, ownerAddress: f.owner, metaText, threshold: p.threshold }),
+          doc: registerDoc({ chainId, cls: f.class, assetId: f.asset, ownerAddress: f.owner, meta }),
+          tx: (approvals) => ({ kind: KIND_REGISTER, feeKey: "asset_register_fee", payload: registerPayload({ cls: f.class, assetId: f.asset, ownerAddress: f.owner, meta, approvals }) }),
+        };
+      }
+      case "asset_veto": {
+        const a = this.assetOf(f.asset);
+        if (!a || a.deal !== "accepted") return null;
+        return {
+          title: `Vetar venda de ${f.asset}`,
+          lines: describeOrganAction("asset_veto", { assetId: f.asset, buyerAddress: a.other, price: a.price, threshold: p.threshold, fmt }),
+          doc: vetoDoc({ chainId, assetId: f.asset, rev: a.rev, buyerAddress: a.other, price: a.price, deadline: a.deadline }),
+          tx: (approvals) => ({ kind: KIND_VETO, feeKey: null, payload: vetoPayload({ assetId: f.asset, approvals }) }),
+        };
+      }
+      case "lien_add": {
+        const a = this.assetOf(f.asset);
+        if (!a) return null;
+        return {
+          title: `Gravame ${f.lien} em ${f.asset}`,
+          lines: describeOrganAction("lien_add", { assetId: f.asset, lien: f.lien, ref: f.ref, threshold: p.threshold }),
+          doc: lienAddDoc({ chainId, assetId: f.asset, rev: a.rev, lien: f.lien, ref: f.ref }),
+          tx: (approvals) => ({ kind: KIND_LIEN_ADD, feeKey: null, payload: lienAddPayload({ assetId: f.asset, lien: f.lien, ref: f.ref, approvals }) }),
+        };
+      }
+      case "lien_remove": {
+        const a = this.assetOf(f.asset);
+        const i = a ? a.lien_ids.indexOf(f.lien) : -1;
+        if (i < 0) return null;
+        const ref = a.lien_refs[i];
+        return {
+          title: `Remover gravame ${f.lien} de ${f.asset}`,
+          lines: describeOrganAction("lien_remove", { assetId: f.asset, lien: f.lien, ref, threshold: p.threshold }),
+          doc: lienRemoveDoc({ chainId, assetId: f.asset, rev: a.rev, lien: f.lien, ref }),
+          tx: (approvals) => ({ kind: KIND_LIEN_REMOVE, feeKey: null, payload: lienRemovePayload({ assetId: f.asset, lien: f.lien, approvals }) }),
+        };
+      }
+      default:
+        return null;
+    }
+  },
+
+  // para o cartão da lista (sem rede): título e linhas
+  preview(p) {
+    try {
+      const r = this.resolve(p, "");
+      return r ?? { title: `${ACTIONS[p.kind] ?? p.kind}`, lines: ["Os dados do bem mudaram; esta proposta pode ter caducado."] };
+    } catch {
+      return { title: ACTIONS[p.kind] ?? p.kind, lines: [] };
+    }
+  },
+
   card(p) {
-    const type = this.typeOf(p.type);
+    const r = this.preview(p);
     const li = el("li", "brdc-inset space-y-3 p-4");
     const head = el("div", "flex items-start justify-between gap-3");
-    head.appendChild(el("p", "font-semibold", `${label(p.type)} · ${p.cred_id}`));
+    head.appendChild(el("p", "font-semibold", r.title));
     head.appendChild(el("span", p.approvals.length >= p.threshold ? TONE.green : TONE.yellow, `${p.approvals.length} de ${p.threshold} assinaturas`));
     li.appendChild(head);
-    for (const line of this.lines(p, type).slice(0, 3)) li.appendChild(el("p", "text-sm text-[var(--brdc-muted)]", line));
+    for (const line of r.lines.slice(0, 3)) li.appendChild(el("p", "text-sm text-[var(--brdc-muted)]", line));
     const actions = el("div", "flex flex-wrap gap-2");
     const mine = p.approvals.some((a) => a.startsWith(this.reg.public_key));
     if (!mine) actions.appendChild(this.chip("Ler e assinar", () => this.reviewSign(p)));
@@ -267,76 +383,107 @@ export const Organ = {
     return b;
   },
 
-  lines(p, type) {
-    const data = unhex(p.data);
-    let text = "";
-    if (type?.privacy !== "private") {
-      try {
-        text = fromUtf8(data);
-      } catch {
-        text = "(binário)";
-      }
-    }
-    return describeIssue({ typeLabel: label(p.type), id: p.cred_id, subjectAddress: p.subject, dataText: text, privacy: type?.privacy ?? "public", ref: p.ref, threshold: p.threshold });
+  // --- nova ação ---
+
+  available() {
+    const a = [];
+    if (this.reg.types.length) a.push("credential_issue");
+    if (this.reg.classes.length) a.push("asset_register");
+    if (this.reg.organ_assets.some((x) => x.deal === "accepted")) a.push("asset_veto");
+    if (this.reg.organ_assets.length) a.push("lien_add");
+    if (this.reg.organ_assets.some((x) => x.lien_ids.length)) a.push("lien_remove");
+    return a;
   },
 
-  // --- nova emissão ---
-
   openNew() {
-    const sel = this.q("[data-role='type']");
+    const sel = this.q("[data-role='action']");
     sel.textContent = "";
-    for (const t of this.reg.types) {
-      const o = el("option", "", label(t.id));
-      o.value = t.id;
+    for (const k of this.available()) {
+      const o = el("option", "", ACTIONS[k]);
+      o.value = k;
       sel.appendChild(o);
     }
-    for (const r of ["holder", "data", "ref"]) this.q(`[data-role='${r}']`).value = "";
-    this.typeHelp();
+    this.drawForm();
     this.step("new");
   },
 
-  typeHelp() {
-    const t = this.typeOf(this.q("[data-role='type']").value);
-    const priv = t?.privacy === "private";
-    this.q("[data-role='data-label']").textContent = priv ? "Dados (ficam só com o titular; a rede guarda apenas o compromisso)" : "Dados (públicos, ficam na rede)";
-    const help = this.q("[data-role='privacy-help']");
-    help.hidden = !priv;
-    help.textContent = priv ? "Credencial privada: um sal aleatório é gerado e você vai entregar os dados e o sal ao titular, por fora da rede." : "";
+  drawForm() {
+    const kind = this.q("[data-role='action']").value;
+    const box = this.q("[data-role='form']");
+    box.textContent = "";
+    this.fields = {};
+    for (const [name, text, type] of FORMS[kind] ?? []) {
+      const wrap = el("label", "block text-sm text-[var(--brdc-muted)]", text);
+      let input;
+      if (type === "text") {
+        input = el("input", "brdc-input mt-1");
+        input.type = "text";
+        input.autocomplete = "off";
+        input.spellcheck = false;
+        if (name === "holder" || name === "owner") input.className += " font-mono text-sm";
+      } else {
+        input = el("select", "brdc-input mt-1");
+        const items = type === "type" ? this.reg.types.map((t) => [t.id, label(t.id)])
+          : type === "class" ? this.reg.classes.map((c) => [c.id, c.id])
+          : this.reg.organ_assets
+              .filter((a) => (kind === "asset_veto" ? a.deal === "accepted" : kind === "lien_remove" ? a.lien_ids.length > 0 : true))
+              .map((a) => [a.id, `${a.id} (${a.class})`]);
+        for (const [v, t] of items) {
+          const o = el("option", "", t);
+          o.value = v;
+          input.appendChild(o);
+        }
+      }
+      wrap.appendChild(input);
+      box.appendChild(wrap);
+      this.fields[name] = input;
+    }
   },
 
   async propose() {
     this.error("");
-    const t = this.typeOf(this.q("[data-role='type']").value);
-    const holder = this.q("[data-role='holder']").value.trim();
-    const text = this.q("[data-role='data']").value;
-    const ref = this.q("[data-role='ref']").value.trim();
-    try {
-      decodeAddress(holder);
-    } catch {
-      return this.error("Endereço do titular inválido. Confira todos os caracteres.");
+    const kind = this.q("[data-role='action']").value;
+    const v = (n) => this.fields[n]?.value?.trim() ?? "";
+    const needAddress = (a, who) => {
+      try { decodeAddress(a); return true; } catch { this.error(`Endereço ${who} inválido. Confira todos os caracteres.`); return false; }
+    };
+    let body, note = "";
+    if (kind === "credential_issue") {
+      const t = this.typeOf(v("type"));
+      if (!needAddress(v("holder"), "do titular")) return;
+      if (!v("data")) return this.error("Informe os dados da credencial.");
+      const id = `${t.id}-${hex(crypto.getRandomValues(new Uint8Array(3)))}`;
+      let data = utf8(this.fields.data.value);
+      if (t.privacy === "private") {
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        note = `GUARDE e entregue ao titular, por fora da rede: dados "${this.fields.data.value}" e sal ${hex(salt)}.`;
+        data = commitment(salt, data);
+      }
+      body = proposalFields({ type: t.id, id, subjectAddress: v("holder"), data, ref: v("ref") });
+    } else if (kind === "asset_register") {
+      if (!v("asset") || !v("meta")) return this.error("Informe o id e a descrição do bem.");
+      if (!needAddress(v("owner"), "do dono")) return;
+      body = registerProposal({ cls: v("class"), assetId: v("asset"), ownerAddress: v("owner"), meta: utf8(this.fields.meta.value) });
+    } else if (kind === "asset_veto") {
+      body = vetoProposal({ assetId: v("asset") });
+    } else if (kind === "lien_add") {
+      if (!v("lien") || !v("ref")) return this.error("Informe o id e a referência do gravame.");
+      body = lienAddProposal({ assetId: v("asset"), lien: v("lien"), ref: v("ref") });
+    } else {
+      if (!v("lien")) return this.error("Informe o id do gravame a remover.");
+      body = lienRemoveProposal({ assetId: v("asset"), lien: v("lien") });
     }
-    if (!text.trim()) return this.error("Informe os dados da credencial.");
-    const id = `${t.id}-${hex(crypto.getRandomValues(new Uint8Array(3)))}`;
-    let data = utf8(text);
-    let salt = null;
-    if (t.privacy === "private") {
-      salt = crypto.getRandomValues(new Uint8Array(16));
-      data = commitment(salt, data);
-    }
-    const body = hex(proposalFields({ type: t.id, id, subjectAddress: holder, data, ref }));
     this.busy(true);
-    this.pushEvent("org:propose", { body }, (reply) => {
+    this.pushEvent("org:propose", { body: hex(body) }, (reply) => {
       this.busy(false);
       if (!reply?.ok) return this.error(ERRORS[reply?.error] ?? "A rede recusou a proposta.");
       this.q("[data-role='done-title']").textContent = "Proposta enviada";
-      this.q("[data-role='done-text']").textContent = salt
-        ? `Os outros membros do órgão veem a proposta na carteira deles e assinam. GUARDE e entregue ao titular, por fora da rede: dados "${text}" e sal ${hex(salt)}.`
-        : "Os outros membros do órgão veem a proposta na carteira deles e assinam. Quando houver assinaturas suficientes, qualquer membro emite.";
+      this.q("[data-role='done-text']").textContent = `Os outros membros do órgão veem a proposta na carteira deles e assinam. Quando houver assinaturas suficientes, qualquer membro emite. ${note}`;
       this.step("done");
     });
   },
 
-  // --- assinar ---
+  // --- revisão, assinatura e emissão ---
 
   showReview(title, confirmText, lines, run) {
     this.q("[data-role='review-title']").textContent = title;
@@ -349,14 +496,14 @@ export const Organ = {
   },
 
   reviewSign(p) {
-    const type = this.typeOf(p.type);
     this.prepare((info, account) => {
-      const doc = issueDoc({ chainId: info.chain_id, type: p.type, id: p.cred_id, subjectAddress: p.subject, data: unhex(p.data), ref: p.ref });
-      const lines = [...this.lines(p, type), `Rede: ${info.chain_id}`, `Assinaturas já dadas: ${p.approvals.length} de ${p.threshold}`];
+      const r = this.resolve(p, info.chain_id);
+      if (!r) return this.error("Os dados do bem mudaram; esta proposta caducou.");
+      const lines = [...r.lines, `Rede: ${info.chain_id}`, `Assinaturas já dadas: ${p.approvals.length} de ${p.threshold}`];
       this.showReview("Confira antes de assinar", "Assinar como membro do órgão", lines, async () => {
         this.busy(true);
         try {
-          const approval = await approve(account, doc);
+          const approval = await approve(account, r.doc);
           this.pushEvent("org:approve", { id: p.id, approval: hex(approval) }, (reply) => {
             this.busy(false);
             if (!reply?.ok) return this.error(ERRORS[reply?.error] ?? "A rede recusou a assinatura.");
@@ -372,20 +519,19 @@ export const Organ = {
     });
   },
 
-  // --- emitir (com as aprovações reunidas) ---
-
   reviewIssue(p) {
-    const type = this.typeOf(p.type);
     this.prepare((info, account) => {
-      const approvals = p.approvals.map(unhex);
-      const payload = issuePayload({ type: p.type, id: p.cred_id, subjectAddress: p.subject, data: unhex(p.data), ref: p.ref, approvals });
-      const tx = buildTx({ kind: KIND_ISSUE, chainId: info.chain_id, nonce: info.nonce, fee: info.credential_fee, senderPublicKey: account.publicKey, payload });
-      if (BigInt(info.credential_fee) > BigInt(info.balance)) return this.error("Saldo insuficiente para a taxa de emissão.");
-      const lines = [...this.lines(p, type), `Assinaturas reunidas: ${p.approvals.length} de ${p.threshold}`, `Taxa da rede: ${formatFull(info.credential_fee)} BRDC (paga por quem envia)`, `Rede: ${info.chain_id}`];
-      this.showReview("Emitir a credencial", "Assinar e enviar a emissão", lines, () =>
+      const r = this.resolve(p, info.chain_id);
+      if (!r) return this.error("Os dados do bem mudaram; esta proposta caducou.");
+      const t = r.tx(p.approvals.map(unhex));
+      const fee = BigInt(t.feeKey ? info[t.feeKey] : "0");
+      if (fee > BigInt(info.balance)) return this.error("Saldo insuficiente para a taxa.");
+      const tx = buildTx({ kind: t.kind, chainId: info.chain_id, nonce: info.nonce, fee, senderPublicKey: account.publicKey, payload: t.payload });
+      const lines = [...r.lines, `Assinaturas reunidas: ${p.approvals.length} de ${p.threshold}`, `Taxa da rede: ${formatFull(fee)} BRDC (paga por quem envia)`, `Rede: ${info.chain_id}`];
+      this.showReview("Emitir na rede", "Assinar e enviar", lines, () =>
         this.signAndSend(tx, (id) => {
-          this.q("[data-role='done-title']").textContent = "Emissão enviada";
-          this.q("[data-role='done-text']").textContent = `A credencial fica pendente durante a janela de contestação. Id da transação: ${id}`;
+          this.q("[data-role='done-title']").textContent = "Enviado";
+          this.q("[data-role='done-text']").textContent = `Entra no próximo bloco. Id da transação: ${id}`;
           this.step("done");
         }),
       );

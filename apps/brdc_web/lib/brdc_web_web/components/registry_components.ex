@@ -76,7 +76,7 @@ defmodule BrdcWebWeb.RegistryComponents do
       <div data-step="list" class="space-y-4">
         <div class="flex items-center justify-between">
           <h2 class="text-lg font-bold">Órgão: assinaturas</h2>
-          <button type="button" data-action="new" class="brdc-chip brdc-chip-blue cursor-pointer">Nova emissão</button>
+          <button type="button" data-action="new" class="brdc-chip brdc-chip-blue cursor-pointer">Nova ação</button>
         </div>
         <p class="text-sm text-[var(--brdc-muted)]">
           Você faz parte do órgão de: <span data-role="types" class="font-semibold"></span>. Emitir exige várias
@@ -90,31 +90,15 @@ defmodule BrdcWebWeb.RegistryComponents do
       </div>
 
       <div data-step="new" hidden class="space-y-4">
-        <h2 class="text-lg font-bold">Nova emissão</h2>
-        <label class="block text-sm text-[var(--brdc-muted)]">Tipo de credencial<select
-          data-role="type"
-          class="brdc-input mt-1"
-        ></select></label>
+        <h2 class="text-lg font-bold">Nova ação do órgão</h2>
         <label class="block text-sm text-[var(--brdc-muted)]">
-          Titular (endereço brdc1…)
-          <input
-            type="text"
-            data-role="holder"
-            autocomplete="off"
-            autocapitalize="none"
-            spellcheck="false"
-            class="brdc-input mt-1 font-mono text-sm"
-          />
+          O que você quer fazer <select data-role="action" class="brdc-input mt-1"></select>
         </label>
-        <label class="block text-sm text-[var(--brdc-muted)]">
-          <span data-role="data-label">Dados</span>
-          <input type="text" data-role="data" autocomplete="off" class="brdc-input mt-1" />
-        </label>
-        <p data-role="privacy-help" hidden class="brdc-warn"></p>
-        <label class="block text-sm text-[var(--brdc-muted)]">
-          Referência (só se o tipo exige: id da credencial anterior)
-          <input type="text" data-role="ref" autocomplete="off" class="brdc-input mt-1" />
-        </label>
+        <div data-role="form" class="space-y-4"></div>
+        <p class="brdc-warn">
+          A ação só vale depois que o número de membros exigido pela classe ou pelo tipo assinar, cada um na
+          própria carteira.
+        </p>
         <p data-role="error" hidden role="alert" class="brdc-alert"></p>
         <button type="button" data-action="propose" class="brdc-btn-primary">Propor aos outros membros</button>
         <button type="button" data-action="back" class="brdc-btn-ghost w-full">Voltar</button>

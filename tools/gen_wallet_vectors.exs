@@ -144,6 +144,41 @@ assets =
     }
   end
 
+# --- ações do órgão sobre bens: documento, aprovações de m1 e m2 e carga da transação ---
+chain = "brdc-vectors"
+approvals_of = fn doc -> for m <- [m1, m2], do: BrdcLedger.Approvals.approval(doc, m.seed) end
+asset_ops_in = [
+  %{op: "register", class: "imovel", asset: "casa-1", owner: b.address, meta: "Rua A, 10"},
+  %{op: "veto", asset: "casa-1", rev: 3, buyer: b.address, price: "50000000", deadline: "1000060"},
+  %{op: "lien_add", asset: "casa-1", rev: 2, lien: "hip-1", ref: "contrato 42"},
+  %{op: "lien_remove", asset: "casa-1", rev: 3, lien: "hip-1", ref: "contrato 42"}
+]
+
+asset_ops =
+  for o <- asset_ops_in do
+    {doc, payload_fun} =
+      case o.op do
+        "register" ->
+          {BrdcLedger.Assets.register_doc(chain, o.class, o.asset, holder_hash, o.meta),
+           &BrdcLedger.Assets.register_payload(o.class, o.asset, holder_hash, o.meta, &1)}
+
+        "veto" ->
+          {BrdcLedger.Assets.veto_doc(chain, o.asset, o.rev, holder_hash, String.to_integer(o.price), String.to_integer(o.deadline)),
+           &BrdcLedger.Assets.veto_payload(o.asset, &1)}
+
+        "lien_add" ->
+          {BrdcLedger.Assets.lien_add_doc(chain, o.asset, o.rev, o.lien, o.ref),
+           &BrdcLedger.Assets.lien_add_payload(o.asset, o.lien, o.ref, &1)}
+
+        "lien_remove" ->
+          {BrdcLedger.Assets.lien_remove_doc(chain, o.asset, o.rev, o.lien, o.ref),
+           &BrdcLedger.Assets.lien_remove_payload(o.asset, o.lien, &1)}
+      end
+
+    aps = approvals_of.(doc)
+    Map.merge(o, %{doc: hex.(doc), approvals: Enum.map(aps, hex), payload: hex.(payload_fun.(aps))})
+  end
+
 File.write!(
   "vectors/tx.json",
   JSON.encode!(%{
@@ -151,6 +186,7 @@ File.write!(
     txs: txs,
     contract_txs: contract_txs,
     issues: issues,
+    asset_ops: asset_ops,
     assets: assets,
     chain_id: "brdc-vectors"
   })

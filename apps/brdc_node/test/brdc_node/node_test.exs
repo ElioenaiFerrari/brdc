@@ -231,7 +231,7 @@ defmodule BrdcNode.NodeTest do
 
       assert {:ok, bin} = f.(:status, <<>>)
 
-      assert {:ok, ["node-test", 0, 0, 0, <<>>, 0, 1_000, 1, 10_000, 10_000, 20_000]} =
+      assert {:ok, ["node-test", 0, 0, 0, <<>>, 0, 1_000, 1, 10_000, 10_000, 20_000, 50_000]} =
                BrdcCrypto.Encoding.decode(Handler.status_schema(), bin)
 
       assert {:ok, bin} = f.(:get_account, addr(5))

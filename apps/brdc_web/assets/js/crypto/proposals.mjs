@@ -38,15 +38,17 @@ export function issuePayload({ type, id, subjectAddress, data, ref = "", approva
   );
 }
 
-/** Corpo do pedido de proposta ao nó (`<<1, campos>>`), para o servidor repassar. */
+/** Números dos tipos de proposta na porta pública (iguais aos de `BrdcNode.Proposals`). */
+export const KIND = { credential_issue: 1, asset_register: 2, asset_veto: 3, lien_add: 4, lien_remove: 5 };
+
+/** Corpo do pedido de proposta ao nó: subtipo 1, número do tipo e os campos do tipo. */
+export const proposalBody = (kind, fields) => concat(u8(1), u8(KIND[kind]), fields);
+
+/** Campos da emissão de credencial (para `proposalBody`). */
 export function proposalFields({ type, id, subjectAddress, data, ref = "" }) {
-  return concat(
-    u8(1),
-    stringField(type),
-    stringField(id),
-    fixed(decodeAddress(subjectAddress), 32),
-    bytesField(data),
-    stringField(ref),
+  return proposalBody(
+    "credential_issue",
+    concat(stringField(type), stringField(id), fixed(decodeAddress(subjectAddress), 32), bytesField(data), stringField(ref)),
   );
 }
 

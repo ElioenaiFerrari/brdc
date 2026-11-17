@@ -79,6 +79,7 @@ defmodule BrdcWebWeb.WalletLive do
            contract_fee: Integer.to_string(c.contract_fee),
            credential_fee: Integer.to_string(c.credential_fee),
            asset_step_fee: Integer.to_string(c.asset_step_fee),
+           asset_register_fee: Integer.to_string(c.asset_register_fee),
            time: Integer.to_string(c.time)
          }, assign(socket, chain: c, offline: false)}
 

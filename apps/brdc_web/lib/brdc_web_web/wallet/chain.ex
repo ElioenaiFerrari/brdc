@@ -15,6 +15,7 @@ defmodule BrdcWebWeb.Wallet.Chain do
           contract_fee: non_neg_integer(),
           credential_fee: non_neg_integer(),
           asset_step_fee: non_neg_integer(),
+          asset_register_fee: non_neg_integer(),
           balance: non_neg_integer(),
           pending_balance: non_neg_integer(),
           nonce: non_neg_integer(),
@@ -54,6 +55,7 @@ defmodule BrdcWebWeb.Wallet.Chain do
          contract_fee: st.contract_fee,
          credential_fee: st.credential_fee,
          asset_step_fee: st.asset_step_fee,
+         asset_register_fee: st.asset_register_fee,
          pending: st.pending,
          transfer_base: st.transfer_base,
          per_byte: st.per_byte,
@@ -106,13 +108,17 @@ defmodule BrdcWebWeb.Wallet.Chain do
          {:ok, creds} <- Client.credentials_of(endpoint, hash),
          {:ok, types} <- Client.types_for(endpoint, pub),
          {:ok, props} <- Client.proposals_for(endpoint, pub),
-         {:ok, assets} <- Client.assets_of(endpoint, hash) do
+         {:ok, assets} <- Client.assets_of(endpoint, hash),
+         {:ok, classes} <- Client.classes_for(endpoint, pub),
+         {:ok, organ_assets} <- Client.organ_assets(endpoint, pub) do
       {:ok,
        %{
          credentials: Enum.map(creds, &cred_for_browser/1),
          types: Enum.map(types, &type_for_browser/1),
          proposals: Enum.map(props, &proposal_for_browser/1),
-         assets: Enum.map(assets, &asset_for_browser/1)
+         assets: Enum.map(assets, &asset_for_browser/1),
+         classes: Enum.map(classes, &class_for_browser/1),
+         organ_assets: Enum.map(organ_assets, &asset_for_browser/1)
        }}
     else
       _ -> {:error, :offline}
@@ -138,7 +144,9 @@ defmodule BrdcWebWeb.Wallet.Chain do
       class: a.class,
       meta: Base.encode16(a.meta, case: :lower),
       rev: a.rev,
-      liens: a.liens,
+      owner: Bech32m.encode("brdc", a.owner),
+      lien_ids: a.lien_ids,
+      lien_refs: a.lien_refs,
       role: a.role,
       deal: a.deal,
       other: Bech32m.encode("brdc", a.other),
@@ -162,13 +170,38 @@ defmodule BrdcWebWeb.Wallet.Chain do
   defp proposal_for_browser(p) do
     %{
       id: Base.encode16(p.id, case: :lower),
-      type: p.type,
-      cred_id: p.cred_id,
-      subject: Bech32m.encode("brdc", p.subject),
-      data: Base.encode16(p.data, case: :lower),
-      ref: p.ref,
+      kind: Atom.to_string(p.kind),
+      fields: fields_for_browser(p.kind, p.fields),
       approvals: Enum.map(p.approvals, &Base.encode16(&1, case: :lower)),
       threshold: p.threshold
+    }
+  end
+
+  # endereços em `brdc1…`, dados binários em hexadecimal, o resto como texto
+  defp fields_for_browser(:credential_issue, f) do
+    %{
+      type: f.type,
+      id: f.id,
+      subject: Bech32m.encode("brdc", f.subject),
+      data: hex(f.data),
+      ref: f.ref
+    }
+  end
+
+  defp fields_for_browser(:asset_register, f) do
+    %{class: f.class, asset: f.asset, owner: Bech32m.encode("brdc", f.owner), meta: hex(f.meta)}
+  end
+
+  defp fields_for_browser(_kind, f), do: Map.new(f)
+
+  defp hex(bin), do: Base.encode16(bin, case: :lower)
+
+  defp class_for_browser(c) do
+    %{
+      id: c.id,
+      threshold: c.threshold,
+      organ_size: c.organ_size,
+      veto_window: Integer.to_string(c.veto_window)
     }
   end
 

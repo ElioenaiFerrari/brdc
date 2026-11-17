@@ -31,9 +31,12 @@ Nó some com a proposta (propor de novo); membro assina sem ler (T20); saldo ins
 ## Testes que cobrem
 `proposals_test.exs` (8), `devnet_e2e_test.exs` (ciclo pela rede em TCP), `proposals.test.mjs` (4, bytes iguais aos do Elixir).
 
+## Ações de bens do órgão
+O mesmo mecanismo vale para o órgão da **classe** de um bem: **registrar bem**, **vetar venda** e **adicionar/remover gravame** (ver [fluxo 17](17-assets-in-wallet.md)). A tela "Nova ação" só oferece as ações possíveis no momento (por exemplo, "vetar" só aparece se há venda em andamento).
+
 ## Limites honestos
 - **Verificado à mão no Chrome** com um órgão 2 de 3 (membros `m1` e `m2`, carteiras de passphrases diferentes em origens diferentes) e um titular: propor, duas assinaturas, emitir (taxa 0,01 cobrada), ver **Pendente**, esperar a janela e **Ativar**; a CNH ficou **Ativa**. O fluxo de **contestar** não foi repetido à mão (coberto por testes). O log do servidor só mostra os eventos `wallet:*` e `org:*`, sem frase, senha ou passphrase.
 - Sem blocos vazios, o horário do último bloco fica parado: o nó confere as transações no horário do **próximo** bloco (relógio) e a tela usa o relógio para saber se a janela passou. O teste manual achou esse defeito (a janela nunca "vencia"); corrigido e coberto por teste.
-- Só **emissão** tem proposta; veto, revogação e **bens** ainda usam transação direta (sem tela).
+- Há proposta para **emissão de credencial** e para as ações de **bens** do órgão; veto e revogação de **credencial** ainda usam transação direta (sem tela).
 - Propostas ficam em memória do nó (somem no reinício).
 - Tipos privados: a entrega de dados e sal ao titular é por fora da rede.
