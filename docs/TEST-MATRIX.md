@@ -32,11 +32,36 @@ Invariante → teste que o cobre. Linhas *planejadas* ainda não têm teste: ent
 
 *Fica para depois:* persistência em disco e árvore esparsa (ADR-0012, ainda proposto).
 
+## Fase 3 (motor pronto; gossip, WAL e troca do conjunto ficam para depois)
+| Invariante | Teste |
+|---|---|
+| 4 validadores decidem o mesmo bloco, com certificado de mais de 2/3; mesma semente, mesmo resultado | `consensus_test.exs` (`rede saudável`) |
+| Proponente fora do ar: a rodada seguinte decide | `consensus_test.exs` (`falhas`) |
+| Sem quórum a rede pausa; partição 2×2 não decide e, ao curar, todos decidem o mesmo bloco | `consensus_test.exs` (`falhas`) |
+| Bloco que o ledger recusa nunca é decidido | `consensus_test.exs` (`falhas`) |
+| **Nunca dois blocos finais na mesma altura** com até 1/3 bizantino (silencioso ou equivocador), com perda de mensagens | `consensus_test.exs` (propriedade de segurança); estresse manual de 4.800 execuções |
+| Todos os honestos decidem sem perda de mensagens | `consensus_test.exs` (propriedade de vivacidade) |
+| Voto falso, de estranho, de outra altura ou rede, e proposta de quem não é o proponente ou com hash errado são ignorados | `consensus_test.exs` (`motor isolado`) |
+| Equivocação vira evidência; `inspect` não mostra a chave | `consensus_test.exs` (`motor isolado`) |
+| Certificado: sem quórum, voto repetido, estranho, assinatura ruim, bloco diferente e outra rede falham | `consensus_test.exs` (`certificado`) |
+
+## Fase 4 (em andamento: canal seguro pronto)
+| Invariante | Teste |
+|---|---|
+| Dois validadores do conjunto conversam e cada um vê a chave do outro | `brdc_p2p/test/brdc_p2p/channel_test.exs` |
+| Cliente fora do conjunto e servidor impostor são recusados no handshake | `channel_test.exs` |
+| Rede ou genesis diferentes se recusam mesmo com chaves do conjunto | `channel_test.exs` |
+| O conjunto é consultado a cada conexão (rotação sem reiniciar) | `channel_test.exs` |
+| Quadro gigante é recusado antes de ler o conteúdo; par calado estoura o prazo; separação de quadros | `channel_test.exs` (`limites`) |
+| O certificado carrega a chave de consenso e só aceita Ed25519 | `channel_test.exs` (`certificado`) |
+
+*Falta da Fase 4:* limites por IP/chave, banimento, registros de endereço, descoberta, porta pública, `keygen`/`genesis` e o roteiro de dois computadores.
+
 ## Planejado por fase
 | Fase | Invariantes (a testar) |
 |---|---|
-| 3 | Nunca dois blocos finais na mesma altura (simulação com falhas, partição e proponente bizantino); bloco só final com mais de 2/3; sem quórum a rede pausa; sem blocos vazios; rotação do conjunto por mais de 2/3 |
-| 4 | Só validador do conjunto abre sessão; outra rede ou genesis é recusada; quadro adulterado ou repetido não decifra; limites e banimento; registros de endereço assinados e atualizados |
+| 3 (resto) | Sem blocos vazios (no nó); rotação do conjunto por mais de 2/3; WAL e recuperação |
+| 4 (resto) | Limites e banimento; registros de endereço assinados e atualizados; porta pública com limites |
 | 5 | Bens: transferência só pelo dono, escrow e veto; credenciais: janela de contestação, validade, veto, revogação, privada vs pública; casamento por cônjuge e divórcio revoga casamento; contratos: só as transições do modelo, valores em escrow conservados |
 | 6 | Carteira: frase e passphrase nunca saem do navegador; cofre cifrado; assinatura no navegador aceita pelo nó; CSP sem scripts de terceiros |
 | 7 | Explorador mostra quem assinou cada bloco; roteiro de dois computadores validado |

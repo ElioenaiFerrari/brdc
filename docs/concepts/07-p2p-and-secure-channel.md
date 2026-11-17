@@ -1,24 +1,28 @@
-# 7. P2P e Noise
+# 7. P2P e canal seguro
 
 ## O problema
 Os validadores formam uma rede **ponto a ponto** (P2P), sem servidor central, entre participantes que não confiam uns nos outros. Precisamos de três coisas: saber **quem** está do outro lado, impedir que alguém **escute** ou **adultere** a conversa, e impedir que um estranho **inunde** ou engane a rede.
 
-## Noise: handshake autenticado
-**Noise** é uma família de protocolos de aperto de mão (handshake) que estabelece uma sessão **cifrada e autenticada**. A BRDC usa o padrão **XX**: as duas pontas trocam chaves temporárias e estáticas, derivam chaves de sessão e depois todo quadro é cifrado e tem contador (repetição, adulteração e reordenação falham).
+## TLS 1.3 mútuo: handshake autenticado dos dois lados
+**TLS 1.3** é o aperto de mão que protege praticamente toda a internet. No modo **mútuo**, o servidor **e** o cliente apresentam um certificado e provam ter a chave privada dele. Depois do handshake, tudo é cifrado e autenticado (adulterar um byte derruba a sessão), e as chaves de sessão são temporárias (X25519), então vazar uma sessão não revela as outras.
+
+A BRDC usa o TLS 1.3 **do próprio Erlang/OTP** (`:ssl`), mantido pelo time do OTP. Não usamos o Noise, que era a primeira escolha, porque a única biblioteca Noise em Elixir tinha um só mantenedor e nenhuma auditoria ([ADR-0015](../adr/0015-p2p-over-mutual-tls-1-3.md)).
 
 ## Vincular o canal à identidade do validador
-O Noise sozinho prova que as duas pontas têm **uma** chave, não que são **quem dizem ser**. Então, dentro do handshake, cada validador envia uma **prova**: a chave de consenso dele **assina** a chave Noise da conexão, o `chain_id` e o **hash do genesis**. Quem recebe confere:
+Normalmente o TLS confia numa autoridade certificadora (CA). Aqui **não há CA**: o certificado é **autoassinado** e sua chave é a **própria chave de consenso Ed25519** do validador. Quem recebe confere, durante o handshake:
 
-- a assinatura fecha com a chave Noise **daquela conexão** (não serve em outra);
-- a rede e o genesis são os mesmos (uma rede nunca aceita mensagem de outra);
-- a chave de consenso está no **conjunto de validadores em vigor**.
+- a assinatura do certificado fecha (o par tem a chave privada);
+- a chave pública **está no conjunto de validadores em vigor** (senão o handshake é recusado, antes de qualquer dado).
 
-Sem prova válida, nada além do handshake é lido.
+Logo depois vem a mensagem `hello`, com `chain_id` e **hash do genesis**: uma rede nunca aceita mensagem de outra. Só depois de um `hello` válido o par conta como autenticado (no TLS 1.3 o cliente pode terminar a conexão antes de o servidor validar o certificado dele).
+
+## Uma armadilha real
+Ao aceitar certificados autoassinados é fácil escrever uma verificação que **deixa qualquer um entrar**: no OTP, se o `verify_fun` simplesmente aceita o evento do certificado autoassinado, o evento seguinte (onde se conferiria a chave) **nunca acontece**. A conferência da chave tem de ficar no próprio evento do certificado autoassinado. Foi o que o nosso teste de intruso pegou.
 
 ## Duas portas
 | Porta | Quem usa | O que serve |
 |---|---|---|
-| **Pares** (Noise) | só validadores | consenso, blocos, sincronização, descoberta |
+| **Pares** (TLS 1.3 mútuo) | só validadores | consenso, blocos, sincronização, descoberta |
 | **Pública** (sem login) | carteira, explorador | ler blocos e estado, enviar transação já assinada; com limites por IP |
 
 O cliente **não confia** no nó: reverifica assinaturas e provas, então um nó mentiroso é detectado, não obedecido.
@@ -30,4 +34,4 @@ Teto de conexões (total, por IP, por chave), prazo de handshake, tamanho máxim
 Em Erlang/Elixir, nós conectados por distribuição **executam código uns nos outros**: ótimo entre máquinas suas, inadequado para participantes que não confiam entre si ([ADR-0007](../adr/0007-p2p-tcp-with-noise.md)).
 
 ## Onde está no código
-*Planejado (Fase 4, `brdc_p2p`). O projeto irmão Teko já validou este desenho em dois computadores (ADR-0048 dele).*
+Em construção na Fase 4 (`brdc_p2p`). O projeto irmão Teko validou o desenho de duas portas, limites e descoberta em dois computadores (ADR-0048 dele), com Noise em vez de TLS.

@@ -34,7 +34,7 @@ Diferente do Bitcoin, **não há "esperar 6 confirmações"**: bloco decidido é
 O motor é uma **máquina de estados sem I/O** (`brdc_consensus`): recebe eventos (mensagem, tempo esgotado) e devolve **ações** (enviar voto, gravar). Isso permite testar tudo por **simulação determinística** (partições, atrasos, proponente bizantino). O conjunto muda por rotação aprovada por mais de 2/3. Decisão: [ADR-0003](../adr/0003-bft-consensus-with-permissioned-validators.md).
 
 ## Onde está no código
-*Planejado (Fase 3).*
+Fase 3 pronta: veja [Como ler o código da Fase 3](12-reading-phase-3-code.md).
 
 ## Para ir além
 Projeto irmão Teko: `teko-bft` (Rust) implementa este mesmo desenho.

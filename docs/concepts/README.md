@@ -10,10 +10,11 @@ Leia na ordem; cada uma se apoia na anterior.
 4. [Consenso BFT](04-bft-consensus.md): como vários computadores que não confiam uns nos outros concordam sobre um bloco.
 5. [Stablecoin e emissores](05-stablecoin-and-issuers.md): o que mantém 1 BRDC = 1 BRL, mint, burn e o que a chain consegue (e não consegue) provar.
 6. [Contratos nativos](06-native-contracts.md): por que não há máquina virtual, módulos nativos e modelos declarativos.
-7. [P2P e Noise](07-p2p-and-noise.md): como os nós conversam com segurança.
+7. [P2P e canal seguro (TLS 1.3 mútuo)](07-p2p-and-secure-channel.md): como os nós conversam com segurança.
 8. [Credenciais e bens](08-credentials-and-assets.md): CNH, identificação, casamento, divórcio e transferência de propriedade.
 9. [OTP e desempenho](09-otp-and-performance.md): processos, supervisão, e onde GenStage, Broadway, Flow e Reactor cabem (e onde não).
 10. [Como ler o código da Fase 1](10-reading-phase-1-code.md): mapa de leitura de `brdc_crypto`, com exemplos que rodam.
 11. [Como ler o código da Fase 2](11-reading-phase-2-code.md): mapa de leitura de `brdc_ledger`.
+12. [Como ler o código da Fase 3](12-reading-phase-3-code.md): mapa de leitura de `brdc_consensus`.
 
 Termos novos estão no [GLOSSARY](../GLOSSARY.md). Ao fim de cada fase de implementação, a página correspondente ganha a seção **"Como ler o código desta fase"**.

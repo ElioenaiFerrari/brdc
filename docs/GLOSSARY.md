@@ -21,7 +21,8 @@ Termos em ordem alfabética. Termos novos entram aqui no mesmo trabalho que os i
 - **M-de-N:** decisão que exige M assinaturas distintas de um conjunto de N membros.
 - **Mempool:** fila local de transações válidas esperando entrar num bloco.
 - **Mint:** criação de BRDC por um emissor quando o usuário deposita reais.
-- **Noise:** família de protocolos de handshake com criptografia autenticada, usada entre os nós. Ver [P2P e Noise](concepts/07-p2p-and-noise.md).
+- **TLS 1.3 mútuo:** canal cifrado em que os dois lados provam ter a chave; na BRDC, a chave do certificado é a chave de consenso do validador (ADR-0015). Ver [P2P e canal seguro](concepts/07-p2p-and-secure-channel.md).
+- **Noise:** família de protocolos de handshake; foi a primeira escolha (ADR-0007) e foi trocada pelo TLS 1.3 por falta de biblioteca bem mantida.
 - **Nonce (de conta):** contador de transações de uma conta; impede repetição (replay) e fixa a ordem.
 - **Proponente:** validador que monta o bloco da rodada (muda a cada rodada).
 - **Raiz de estado:** hash que resume todo o estado (todas as contas e contratos) no cabeçalho do bloco.

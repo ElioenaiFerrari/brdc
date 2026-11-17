@@ -14,7 +14,7 @@ def architecture_overview():
     d.node(780, 130, 220, 76, "Explorador", "apps/brdc_web", "external", "leitura")
     d.node(60, 290, 220, 76, "Ledger", "apps/brdc_ledger", "boto", "estado", sub2="moeda · bens · credenciais")
     d.node(420, 290, 220, 76, "Consenso BFT", "apps/brdc_consensus", "focal", "finalidade imediata")
-    d.node(780, 290, 220, 76, "Outros validadores", "apps/brdc_p2p · Noise", "plain", "rede P2P")
+    d.node(780, 290, 220, 76, "Outros validadores", "apps/brdc_p2p · TLS 1.3", "plain", "rede P2P")
     d.node(420, 450, 220, 76, "Blocos e estado", "armazenamento local", "store", "disco")
     d.text(60, 410, "O ledger não conhece rede nem consenso:", 11, INK, weight=600)
     d.text(60, 428, "recebe um bloco decidido e devolve o novo estado.", 11, MUTED)

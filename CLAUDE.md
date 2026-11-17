@@ -6,7 +6,7 @@ O dono do produto quer **entender tudo**: a documentação não é apêndice, é
 
 Idioma dos documentos: pt-BR. Identificadores, módulos, mensagens e código: inglês. **Nomes de pastas e arquivos sempre em inglês.**
 
-Projeto irmão (Rust, de onde vêm vários desenhos): `~/Documents/projects/teko` (BFT, P2P com Noise, credenciais, bens, carteira). Aqui reaproveitamos as **ideias e os ADRs**, reescritas nos idiomas do Elixir/OTP.
+Projeto irmão (Rust, de onde vêm vários desenhos): `~/Documents/projects/teko` (BFT, P2P, credenciais, bens, carteira). Aqui reaproveitamos as **ideias e os ADRs**, reescritas nos idiomas do Elixir/OTP.
 
 ## Estado atual
 
@@ -18,7 +18,7 @@ Projeto irmão (Rust, de onde vêm vários desenhos): `~/Documents/projects/teko
 apps/brdc_crypto     hash etiquetado, Ed25519, BIP-39, SLIP-10, passphrase, bech32m          (Fase 1)
 apps/brdc_ledger     contas, transações, blocos, estado, módulos nativos                    (Fase 2 e 5)
 apps/brdc_consensus  motor BFT sem I/O                                                      (Fase 3)
-apps/brdc_p2p        sessões Noise, portas de pares e pública, limites, descoberta         (Fase 4)
+apps/brdc_p2p        canal TLS 1.3 mútuo (ADR-0015), portas de pares e pública, limites, descoberta         (Fase 4)
 apps/brdc_node       nó OTP: supervisão, mempool, armazenamento, RPC                        (Fase 7)
 apps/brdc_web        Phoenix LiveView: carteira (JS no navegador) e explorador              (Fase 6, ainda não criado)
 docs/                README, concepts/, adr/, flows/, diagrams/, THREAT-MODEL, TEST-MATRIX, GLOSSARY, NETWORKS, PHASES

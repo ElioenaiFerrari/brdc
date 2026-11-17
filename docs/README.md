@@ -3,7 +3,7 @@
 Tudo em **pt-BR** (código e identificadores em inglês). A regra é a **documentação viva**: cada mudança atualiza a doc no mesmo trabalho. Veja as regras no [CLAUDE.md](../CLAUDE.md).
 
 ## Para entender (comece aqui)
-- [Guia de conceitos](concepts/README.md): blockchain, estado, hash e assinatura, carteira HD e passphrase, consenso BFT, stablecoin, contratos nativos, P2P com Noise, credenciais e bens. Cada página explica o conceito do zero e mostra como a BRDC o usa.
+- [Guia de conceitos](concepts/README.md): blockchain, estado, hash e assinatura, carteira HD e passphrase, consenso BFT, stablecoin, contratos nativos, P2P, credenciais e bens. Cada página explica o conceito do zero e mostra como a BRDC o usa.
 - [Roteiro das fases](PHASES.md): o que existe, o que vem e em que ordem.
 - [Arquitetura](ARCHITECTURE.md): quem fala com quem e por quê.
 - [GLOSSARY](GLOSSARY.md): os termos, em ordem alfabética.
@@ -19,6 +19,8 @@ Um fluxo por funcionalidade (texto e diagrama) em `docs/flows/`, à medida que c
 
 - [01 — Da frase ao endereço](flows/01-phrase-to-address.md) (Fase 1)
 - [02 — Como um bloco é executado](flows/02-block-execution.md) (Fase 2)
+- [03 — Uma rodada de consenso](flows/03-consensus-round.md) (Fase 3)
+- [04 — Como dois validadores se conectam](flows/04-secure-channel.md) (Fase 4, em andamento)
 
 A [arquitetura](ARCHITECTURE.md) dá a visão geral.
 

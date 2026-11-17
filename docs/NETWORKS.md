@@ -12,7 +12,7 @@
 ## Como será (resumo)
 - **Validadores autorizados** com poder igual, bloco final com mais de 2/3 ([ADR-0003](adr/0003-bft-consensus-with-permissioned-validators.md)).
 - **Sem blocos vazios:** a cadeia só cresce quando há transação.
-- **Duas portas por nó:** a de **pares** (Noise, só validadores) e a **pública** (clientes: carteira, explorador), como no Teko ([ADR-0007](adr/0007-p2p-tcp-with-noise.md)).
+- **Duas portas por nó:** a de **pares** (TLS 1.3 mútuo, só validadores) e a **pública** (clientes: carteira, explorador), como no Teko ([ADR-0007](adr/0007-p2p-tcp-with-noise.md)).
 - **`chain_id` e hash do genesis** entram no handshake e nas assinaturas: uma rede nunca aceita mensagem de outra.
 
 ## Decisões pendentes que afetam as redes

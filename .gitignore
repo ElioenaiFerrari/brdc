@@ -27,3 +27,7 @@ erl_crash.dump
 *.seed
 /node_modules/
 /apps/*/priv/static/assets/
+
+# Python (gerador de diagramas)
+__pycache__/
+*.pyc

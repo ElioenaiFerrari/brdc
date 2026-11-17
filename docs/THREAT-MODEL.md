@@ -22,7 +22,7 @@ Primeira versão (Fase 0): o que queremos defender, de quem, e o que ainda **nã
 | T4 | Equivocação de validador | evidência de dois votos assinados em conflito *(Fase 3)*; penalização por stake só no futuro | no começo só há evidência pública, sem multa |
 | T5 | Criação de moeda sem lastro | só M-de-N de emissores faz mint, com atestados de reserva públicos e invariante de oferta (ADR-0002) *(Fase 2)* | **a chain não prova o lastro real**: confia nos emissores |
 | T6 | Spam de transações | taxa em BRDC por byte e por tipo, limites de mempool (ADR-0008) *(Fases 2 e 4)* | |
-| T7 | Nó estranho na rede de validadores | sessões Noise vinculadas à chave do validador, limites e banimento (ADR-0007) *(Fase 4)* | a porta pública não é cifrada |
+| T7 | Nó estranho na rede de validadores | canal TLS 1.3 mútuo com a chave do validador fixada no handshake, limites e banimento (ADR-0015, ADR-0007) *(Fase 4)* | a porta pública não é cifrada |
 | T8 | Phishing da frase ou da passphrase | a UI nunca pede a frase a ninguém além do próprio cofre local e avisa; BIP-39 com passphrase *(Fase 6)* | usuário enganado entrega a frase: sem recuperação |
 | T9 | Fundos roubados ou enviados por engano | **nenhuma**: não há congelamento nem estorno (ADR-0009) | decisão assumida do dono do produto |
 | T10 | Corrupção do estado por bug de execução | ledger puro e determinístico, testes por propriedade, raiz de estado no cabeçalho *(Fase 2)* | sem auditoria externa |
