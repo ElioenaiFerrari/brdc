@@ -10,12 +10,17 @@ defmodule BrdcNode.Node do
     decisão pendente P3; aqui é só um parâmetro). `:manual` desliga o relógio e os testes chamam `produce/1`.
   - **Horário do bloco** vem do relógio injetado e nunca decresce (ADR-0016).
   - As taxas vão para a conta do próprio validador.
-  - **Tudo em memória** (ADR-0012 pendente): reiniciar o nó volta à gênese.
+  - **Disco** (ADR-0012): com `:data_dir`, cada bloco é gravado (com `sync`) **antes** de entrar no estado; ao subir,
+    o nó relê o log e **reexecuta** cada bloco, conferindo a raiz de estado. Sem `:data_dir`, tudo fica em memória.
+    Também guarda as propostas dos órgãos (`proposals.bin`, descartáveis) e o hash da gênese (`genesis.hash`),
+    que impede abrir o disco de outra rede.
   """
   use GenServer
   alias BrdcCrypto.{Address, Ed25519}
   alias BrdcLedger.{Block, Executor, State, Tx}
+  alias BrdcNode.BlockStore.File, as: LogFile
   alias BrdcNode.{Genesis, Proposals}
+  require Logger
 
   @max_mempool 10_000
 
@@ -23,7 +28,7 @@ defmodule BrdcNode.Node do
 
   @doc """
   Opções: `:genesis` (`BrdcNode.Genesis`), `:seed` (chave do validador, 32 bytes), `:block_interval_ms`
-  (padrão 1000, ou `:manual`), `:clock` (`fn -> segundos end`), `:name`.
+  (padrão 1000, ou `:manual`), `:clock` (`fn -> segundos end`), `:name`, `:data_dir` (pasta do disco; sem ela, tudo em memória).
   """
   def start_link(opts) do
     {gen, opts} = Keyword.split(opts, [:name])
@@ -112,24 +117,32 @@ defmodule BrdcNode.Node do
   def init(opts) do
     genesis = Keyword.fetch!(opts, :genesis)
     seed = Keyword.fetch!(opts, :seed)
-    state = genesis |> Genesis.ledger_params() |> State.new()
+    state0 = genesis |> Genesis.ledger_params() |> State.new()
 
-    {:ok,
-     %{
-       genesis: genesis,
-       seed: seed,
-       proposer: Address.hash(Ed25519.public_key(seed)),
-       state: state,
-       pending_state: state,
-       mempool: [],
-       blocks: %{},
-       proposals: Proposals.new(),
-       interval: Keyword.get(opts, :block_interval_ms, 1_000),
-       clock: Keyword.get(opts, :clock, fn -> System.os_time(:second) end),
-       timer: nil,
-       subscribers: %{}
-     }}
+    base = %{
+      genesis: genesis,
+      seed: seed,
+      proposer: Address.hash(Ed25519.public_key(seed)),
+      mempool: [],
+      blocks: %{},
+      proposals: Proposals.new(),
+      interval: Keyword.get(opts, :block_interval_ms, 1_000),
+      clock: Keyword.get(opts, :clock, fn -> System.os_time(:second) end),
+      timer: nil,
+      subscribers: %{},
+      store: nil,
+      data_dir: nil
+    }
+
+    case recover(base, state0, Keyword.get(opts, :data_dir)) do
+      {:ok, s, state} -> {:ok, Map.merge(s, %{state: state, pending_state: state})}
+      {:error, reason} -> {:stop, reason}
+    end
   end
+
+  @impl true
+  def terminate(_reason, %{store: %LogFile{} = store}), do: LogFile.close(store)
+  def terminate(_reason, _s), do: :ok
 
   @impl true
   def handle_call(:status, _from, s) do
@@ -191,7 +204,7 @@ defmodule BrdcNode.Node do
 
   def handle_call({:propose, kind, fields}, _from, s) do
     case Proposals.put(s.proposals, view(s), kind, fields) do
-      {:ok, store, id} -> {:reply, {:ok, id}, %{s | proposals: store}}
+      {:ok, store, id} -> {:reply, {:ok, id}, save_proposals(%{s | proposals: store})}
       {:error, _} = err -> {:reply, err, s}
     end
   end
@@ -225,7 +238,7 @@ defmodule BrdcNode.Node do
 
   def handle_call({:approve, id, approval}, _from, s) do
     case Proposals.approve(s.proposals, view(s), id, approval) do
-      {:ok, store, n} -> {:reply, {:ok, n}, %{s | proposals: store}}
+      {:ok, store, n} -> {:reply, {:ok, n}, save_proposals(%{s | proposals: store})}
       {:error, _} = err -> {:reply, err, s}
     end
   end
@@ -319,11 +332,7 @@ defmodule BrdcNode.Node do
 
     case Block.build(s.state, s.proposer, [s.proposer], txs, time) do
       {:ok, block, new_state} ->
-        s = %{s | state: new_state, mempool: rest, blocks: keep(s.blocks, block)}
-        s = %{s | proposals: Proposals.prune(s.proposals, new_state)}
-        s = %{s | pending_state: replay(new_state, rest)}
-        notify(s, block)
-        {:ok, s, block.height}
+        commit(s, block, new_state, rest)
 
       {:error, {:invalid_tx, id, _reason}} ->
         # não deveria acontecer (cada tx foi validada ao entrar); descarta a ofensora e tenta de novo
@@ -333,6 +342,100 @@ defmodule BrdcNode.Node do
 
       {:error, _} ->
         {:nothing, s}
+    end
+  end
+
+  # grava no disco ANTES de o bloco entrar no estado: se a gravação falhar, nada mudou e as transações seguem
+  # no mempool (o erro vai para o log; o operador age)
+  defp commit(s, block, new_state, rest) do
+    case persist_block(s, block) do
+      :ok ->
+        s = %{s | state: new_state, mempool: rest, blocks: keep(s.blocks, block)}
+        s = %{s | proposals: Proposals.prune(s.proposals, new_state)}
+        persist_proposals(s)
+        s = %{s | pending_state: replay(new_state, rest)}
+        notify(s, block)
+        {:ok, s, block.height}
+
+      {:error, reason} ->
+        Logger.error("não consegui gravar o bloco #{block.height} no disco: #{inspect(reason)}")
+        {:nothing, s}
+    end
+  end
+
+  defp save_proposals(s) do
+    persist_proposals(s)
+    s
+  end
+
+  defp persist_block(%{store: nil}, _block), do: :ok
+  defp persist_block(%{store: store}, block), do: LogFile.append(store, Block.encode(block))
+
+  # --- disco: replay ao subir e propostas ----------------------------------------------------------
+
+  defp recover(s, state, nil), do: {:ok, s, state}
+
+  defp recover(s, state, dir) do
+    with :ok <- File.mkdir_p(dir),
+         :ok <- check_genesis(dir, s.genesis),
+         {:ok, store, records, recovery} <- LogFile.open(Path.join(dir, "blocks.log")),
+         {:ok, state, blocks} <- replay_blocks(state, records) do
+      if recovery.truncated_bytes > 0,
+        do:
+          Logger.warning(
+            "log de blocos: cauda rasgada descartada (#{recovery.truncated_bytes} bytes)"
+          )
+
+      s = %{s | store: store, data_dir: dir, blocks: blocks}
+      {:ok, %{s | proposals: load_proposals(dir, state)}, state}
+    end
+  end
+
+  defp check_genesis(dir, genesis) do
+    path = Path.join(dir, "genesis.hash")
+    mine = Base.encode16(Genesis.hash(genesis), case: :lower)
+
+    case File.read(path) do
+      {:ok, ^mine} -> :ok
+      {:ok, _other} -> {:error, :wrong_genesis}
+      {:error, :enoent} -> File.write(path, mine, [:sync])
+      {:error, _} = err -> err
+    end
+  end
+
+  # cada bloco do disco é decodificado e REEXECUTADO: raiz de estado, altura e encadeamento conferem
+  defp replay_blocks(state, records) do
+    Enum.reduce_while(records, {:ok, state, %{}}, fn rec, {:ok, st, blocks} ->
+      with {:ok, block} <- Block.decode(rec),
+           {:ok, st2} <- Block.apply(st, block) do
+        {:cont, {:ok, st2, keep(blocks, block)}}
+      else
+        {:error, reason} -> {:halt, {:error, {:bad_block_on_disk, st.height + 1, reason}}}
+      end
+    end)
+  end
+
+  defp load_proposals(dir, state) do
+    with {:ok, bin} <- File.read(Path.join(dir, "proposals.bin")),
+         {:ok, store} <- Proposals.load(bin) do
+      Proposals.prune(store, state)
+    else
+      _ -> Proposals.new()
+    end
+  end
+
+  # troca atômica: grava num arquivo ao lado e renomeia (nunca deixa um arquivo pela metade)
+  defp persist_proposals(%{data_dir: nil}), do: :ok
+
+  defp persist_proposals(%{data_dir: dir, proposals: store}) do
+    path = Path.join(dir, "proposals.bin")
+    tmp = path <> ".tmp"
+
+    with :ok <- File.write(tmp, Proposals.dump(store), [:sync]),
+         :ok <- File.rename(tmp, path) do
+      :ok
+    else
+      {:error, reason} -> Logger.warning("não consegui gravar as propostas: #{inspect(reason)}")
     end
   end
 

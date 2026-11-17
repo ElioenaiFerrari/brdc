@@ -145,6 +145,19 @@ Invariante → teste que o cobre. Linhas *planejadas* ainda não têm teste: ent
 | Oferta, aceite, cancelamento e finalização no JS têm cargas **iguais** às do Elixir | `assets/js/crypto/assets.test.mjs` + `vectors/tx.json` |
 | Ciclo pela rede: classe, registro, oferta, escrow, finalização depois da janela (relógio) | `apps/brdc_dev/test/brdc_dev/devnet_e2e_test.exs` |
 
+## Persistência em disco (M1, pronto)
+| Invariante | Teste |
+|---|---|
+| Registros voltam na ordem; reabrir continua gravando sem sobrescrever | `apps/brdc_node/test/brdc_node/block_store_test.exs` |
+| Cauda truncada em **qualquer byte** do último registro é descartada e o arquivo continua gravável; escrita rasgada no último registro idem | `block_store_test.exs` |
+| Corrupção no meio (soma errada ou tamanho absurdo) é erro fatal e não toca o arquivo | `block_store_test.exs` |
+| Reiniciar preserva saldos, bens, classes, altura e raiz de estado; a história continua no bloco seguinte | `apps/brdc_node/test/brdc_node/persistence_test.exs` |
+| Reiniciar = estado ao vivo para qualquer sequência de transferências (propriedade) | `persistence_test.exs` |
+| Bloco do disco com raiz errada, log corrompido no meio e disco de outra rede: o nó **não sobe** | `persistence_test.exs` |
+| Propostas dos órgãos sobrevivem, conferidas de novo; arquivo ilegível vira lista vazia | `persistence_test.exs` |
+| Bloco: ida e volta preserva hash e transações; lixo, sobra e truncado são recusados | `persistence_test.exs` |
+| **Verificado à mão:** `kill -9` do servidor da devnet e subida de novo: saldo preservado | (manual, anotado no fluxo 14) |
+
 ## Veto e revogação de credencial (pronto)
 | Invariante | Teste |
 |---|---|

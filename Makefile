@@ -26,6 +26,9 @@ fund: ## BRDC de TESTE para um endereço (nó local rodando): make fund ADDR=brd
 balance: ## Saldo de um endereço no nó local: make balance ADDR=brdc1…
 	mix brdc.balance $(ADDR)
 
+reset-devnet: ## Apaga o disco da rede de teste local (net/data); pare o nó antes
+	mix brdc.devnet.reset
+
 test: ## Testes de todos os apps
 	mix test
 

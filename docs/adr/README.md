@@ -15,7 +15,7 @@ Cada decisão de segurança ou produto vira um ADR: contexto, decisão, alternat
 | [0009](0009-no-freezing-uncensored-brdc.md) | Sem congelamento de contas: BRDC sem censura | Aceito, com riscos assumidos |
 | [0010](0010-account-model-address-and-decimals.md) | Modelo de conta, endereço e casas decimais | Aceito |
 | [0011](0011-deterministic-encoding-and-tagged-hash.md) | Codificação determinística e hash etiquetado | Aceito |
-| [0012](0012-state-tree-and-storage.md) | Árvore de estado e armazenamento | Aceito |
+| [0012](0012-state-tree-and-storage.md) | Armazenamento em disco: log de blocos e estado por replay | Aceito |
 | [0013](0013-governance-of-issuers-and-validators.md) | Governança de emissores e validadores (P1) | Aceito |
 | [0014](0014-fee-table-and-no-halving.md) | Tabela de taxas, repartição e sem halving (P2) | Aceito |
 | [0015](0015-p2p-over-mutual-tls-1-3.md) | Canal P2P: TLS 1.3 mútuo com chave fixada, só OTP (P6, parte de rede) | Aceito |
@@ -26,8 +26,9 @@ Cada decisão de segurança ou produto vira um ADR: contexto, decisão, alternat
 | [0020](0020-browser-crypto-webcrypto-without-dependencies.md) | Criptografia do navegador: WebCrypto e código próprio, sem dependências (P6) | Aceito |
 | [0021](0021-vault-never-stores-passphrase.md) | O cofre da carteira nunca guarda a passphrase | Aceito |
 | [0022](0022-visual-identity-and-wallet-scope.md) | Identidade visual escura com as cores do Brasil e escopo da carteira | Aceito |
-| [0023](0023-local-node-and-wallet-as-client.md) | Nó local de um validador e carteira como cliente da porta pública | **Proposto** |
-| [0024](0024-collective-signing-by-organs.md) | Assinatura coletiva dos órgãos: propostas no nó, aprovações no navegador | **Proposto** |
+| [0023](0023-local-node-and-wallet-as-client.md) | Nó local de um validador e carteira como cliente da porta pública | Aceito |
+| [0024](0024-collective-signing-by-organs.md) | Assinatura coletiva dos órgãos: propostas no nó, aprovações no navegador | Aceito |
+| [0025](0025-block-interval-and-otp-libraries.md) | Intervalo entre blocos e bibliotecas OTP da Fase 7 | Aceito |
 
 ## Decisões PENDENTES (esperam o dono do produto)
 Nada abaixo entra em código antes da resposta.
@@ -36,9 +37,9 @@ Nada abaixo entra em código antes da resposta.
 |---|---|---|
 | P1 | ~~Governança inicial~~ → proposta no [ADR-0013](0013-governance-of-issuers-and-validators.md), aceito | Fases 2 e 3 |
 | P2 | ~~Tabela de taxas~~ → proposta no [ADR-0014](0014-fee-table-and-no-halving.md), aceito | Fase 2 |
-| P3 | **Tempo de agrupamento de blocos** (o intervalo antes de fechar um bloco com transações pendentes) | Fase 3 |
+| P3 | ~~Tempo de agrupamento de blocos~~ → resolvida no [ADR-0025](0025-block-interval-and-otp-libraries.md) (1 s devnet, 2 s testnet, sem bloco vazio) | Fase 3 |
 | P4 | ~~Janelas~~ → resolvida no [ADR-0016](0016-block-time-and-windows-in-seconds.md) | Fase 5 |
 | P5 | ~~Catálogo de contratos~~ → resolvida no [ADR-0017](0017-initial-contract-catalog.md) | Fase 5 |
 | P6 | ~~Biblioteca Noise~~ → resolvida no [ADR-0015](0015-p2p-over-mutual-tls-1-3.md) (TLS 1.3 do OTP). **Falta só a parte do navegador:** resolvida no [ADR-0020](0020-browser-crypto-webcrypto-without-dependencies.md) (WebCrypto e código próprio) | Fase 6 |
-| P7 | **Bibliotecas OTP por cenário** (GenStage, Broadway, Flow, Reactor, Benchee, Telemetry…): quais entram, onde e por quê, cada uma com justificativa de supply chain | Fases 2, 3, 4 e 7 |
+| P7 | **Bibliotecas OTP por cenário**: na Fase 7 nenhuma nova ([ADR-0025](0025-block-interval-and-otp-libraries.md)); GenStage, Broadway, Flow e Benchee só com medição que justifique | Fases 2, 3, 4 e 7 |
 

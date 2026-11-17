@@ -22,7 +22,8 @@ defmodule BrdcDev.Application do
        name: BrdcDev.Node,
        genesis: genesis,
        seed: Map.fetch!(seeds, "v1"),
-       block_interval_ms: Application.get_env(:brdc_dev, :interval_ms, 1_000)},
+       block_interval_ms: Application.get_env(:brdc_dev, :interval_ms, 1_000),
+       data_dir: Application.get_env(:brdc_dev, :data_dir, Path.join(dir, "data"))},
       {Guard, name: BrdcDev.Guard},
       %{
         id: BrdcDev.PublicPort,

@@ -66,6 +66,60 @@ defmodule BrdcLedger.Block do
     )
   end
 
+  @codec [:u64, :u64, :bytes, {:fixed, 32}, {:list, {:fixed, 32}}, {:fixed, 32}, {:list, :bytes}]
+
+  @doc """
+  Codificação completa do bloco (cabeçalho e transações com assinatura), para guardar em disco e
+  trocar entre nós. O `prev_hash` do primeiro bloco vai vazio.
+  """
+  @spec encode(t()) :: binary()
+  def encode(%__MODULE__{state_root: <<_::256>>} = b) do
+    Encoding.encode(@codec, [
+      b.height,
+      b.time,
+      b.prev_hash || <<>>,
+      b.proposer,
+      b.signers,
+      b.state_root,
+      Enum.map(b.txs, &Tx.encode/1)
+    ])
+  end
+
+  @doc "Decodifica; recusa lixo, sobras, `prev_hash` de tamanho estranho e transação malformada."
+  @spec decode(binary()) :: {:ok, t()} | {:error, :malformed}
+  def decode(bin) when is_binary(bin) do
+    with {:ok, [height, time, prev, proposer, signers, root, raw_txs]} <-
+           Encoding.decode(@codec, bin),
+         true <- byte_size(prev) in [0, 32],
+         {:ok, txs} <- decode_txs(raw_txs) do
+      {:ok,
+       %__MODULE__{
+         height: height,
+         time: time,
+         prev_hash: if(prev == <<>>, do: nil, else: prev),
+         proposer: proposer,
+         signers: signers,
+         state_root: root,
+         txs: txs
+       }}
+    else
+      _ -> {:error, :malformed}
+    end
+  end
+
+  defp decode_txs(raw) do
+    Enum.reduce_while(raw, {:ok, []}, fn bin, {:ok, acc} ->
+      case Tx.decode(bin) do
+        {:ok, tx} -> {:cont, {:ok, [tx | acc]}}
+        _ -> {:halt, :error}
+      end
+    end)
+    |> case do
+      {:ok, acc} -> {:ok, Enum.reverse(acc)}
+      :error -> :error
+    end
+  end
+
   @doc """
   Executa as transações sobre `state` e devolve o bloco com `state_root` preenchido e o novo estado.
   Usado por quem **propõe** o bloco.

@@ -37,7 +37,7 @@ Diagrama deste fluxo: **a gerar** (diagramas adiados a pedido do dono).
 - **Nó mentiroso** (omite, atrasa, mostra saldo ou nonce falsos): saldo ou nonce errados só fazem a transação falhar; a **rede** e o **total** aparecem na revisão. Sem provas de estado ainda ([ADR-0023](../adr/0023-local-node-and-wallet-as-client.md)).
 - **Sem conexão com o nó:** a carteira segue destravando e mostra "Sem conexão com a rede"; enviar fica indisponível.
 - **Transferência para endereço errado (válido):** não há como desfazer ou bloquear (ADR-0009). Por isso a revisão mostra o endereço inteiro.
-- **Nó local reiniciado:** volta à gênese (tudo em memória); os saldos de teste somem.
+- **Nó local reiniciado:** o disco (`net/data`) guarda os blocos: ao subir, o nó relê e **reexecuta** o log (ADR-0012), então saldos, bens, credenciais e propostas continuam. Para recomeçar da gênese, pare o nó e rode `make reset-devnet` (`mix brdc.devnet.reset`). Verificado com `kill -9` do servidor.
 
 ## Onde está no código
 `apps/brdc_node/lib/brdc_node/node.ex`, `handler.ex`, `client.ex`; `apps/brdc_dev/` (`devnet.ex`, `funding.ex`, `application.ex`, tarefas `brdc.fund` e `brdc.balance`); `apps/brdc_web/lib/brdc_web_web/wallet/chain.ex`, `live/wallet_live.ex`, `components/send_components.ex`; `apps/brdc_web/assets/js/send_hook.js` e `crypto/{send,amount}.mjs`; `apps/brdc_ledger/lib/brdc_ledger/amount.ex`.

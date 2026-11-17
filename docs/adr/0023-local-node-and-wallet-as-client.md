@@ -1,6 +1,6 @@
 # ADR-0023 — Nó local de um validador e carteira como cliente da porta pública
 
-**Status:** Proposto (aguarda confirmação do dono do produto) · Complementa o [ADR-0007](0007-p2p-tcp-with-noise.md) (duas portas) e o [ADR-0015](0015-p2p-over-mutual-tls-1-3.md).
+**Status:** Aceito (dono do produto, 2026-11-17) · Complementa o [ADR-0007](0007-p2p-tcp-with-noise.md) (duas portas) e o [ADR-0015](0015-p2p-over-mutual-tls-1-3.md).
 
 ## Contexto
 A carteira precisa de saldo e de um lugar para enviar transações. A rede é P2P: não existe servidor central, e o servidor da carteira **não é um nó**. Também é preciso poder testar tudo numa máquina só.

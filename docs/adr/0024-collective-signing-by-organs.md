@@ -1,6 +1,6 @@
 # ADR-0024 — Assinatura coletiva dos órgãos: propostas no nó, aprovações no navegador
 
-**Status:** Proposto (aguarda confirmação do dono do produto) · Complementa o [ADR-0019](0019-credentials-with-contest-window-and-revocation.md) e o [ADR-0023](0023-local-node-and-wallet-as-client.md).
+**Status:** Aceito (dono do produto, 2026-11-17) · Complementa o [ADR-0019](0019-credentials-with-contest-window-and-revocation.md) e o [ADR-0023](0023-local-node-and-wallet-as-client.md).
 
 ## Contexto
 Emitir uma credencial exige M assinaturas de membros de um órgão, cada um na **própria** carteira, em momentos diferentes. É preciso um lugar onde a proposta espere pelas assinaturas, sem dar poder novo a esse lugar.

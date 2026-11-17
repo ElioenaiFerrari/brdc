@@ -38,5 +38,7 @@ Um fluxo por funcionalidade (texto e diagrama) em `docs/flows/`, à medida que c
 
 A [arquitetura](ARCHITECTURE.md) dá a visão geral.
 
+Próxima fase: [plano da Fase 7](PHASE-7-PLAN.md) (aprovado; em andamento).
+
 ## Diagramas
 Gerados por código em `scripts/diagrams/` (skill `diagram-design`, tema em [diagrams/THEME.md](diagrams/THEME.md)); `make diagrams` regenera. Nunca ASCII, nunca editar o PNG à mão.

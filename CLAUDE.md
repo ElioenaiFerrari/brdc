@@ -71,6 +71,8 @@ make test         # testes de todos os apps
 make lint         # credo --strict
 make dialyzer     # tipos (a 1ª vez monta o PLT)
 make docs-check   # links, imagens, apps no README, molde dos fluxos, status dos ADRs
+make run          # carteira (4000) + nó local de teste (4545); os blocos ficam em net/data e sobrevivem a reinício
+make reset-devnet  # apaga net/data (com o nó parado): volta à gênese
 make diagrams     # regenera docs/diagrams/*.png (precisa do Brave)
 make              # lista os atalhos
 ```

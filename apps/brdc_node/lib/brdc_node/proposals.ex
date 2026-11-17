@@ -47,6 +47,52 @@ defmodule BrdcNode.Proposals do
   @spec new() :: store()
   def new, do: %{}
 
+  @doc """
+  Serializa o armazém para o disco (D5 do plano da Fase 7). Não é consenso: ao ler, cada proposta é
+  conferida de novo contra o estado (`prune/2`), então um arquivo velho nunca vale por si.
+  """
+  @spec dump(store()) :: binary()
+  def dump(store) do
+    entries =
+      for {_, p} <- Enum.sort(store) do
+        Encoding.encode([:u8, :bytes, {:list, :bytes}], [
+          kind_number(p.kind),
+          encode_fields(p.kind, p.fields),
+          p.approvals
+        ])
+      end
+
+    Encoding.encode([{:list, :bytes}], [entries])
+  end
+
+  @doc "Lê o que `dump/1` escreveu; arquivo ilegível devolve `{:error, :malformed}` (o nó começa vazio)."
+  @spec load(binary()) :: {:ok, store()} | {:error, :malformed}
+  def load(bin) do
+    case Encoding.decode([{:list, :bytes}], bin) do
+      {:ok, [entries]} -> load_entries(entries)
+      _ -> {:error, :malformed}
+    end
+  end
+
+  defp load_entries(entries) do
+    Enum.reduce_while(entries, {:ok, new()}, fn e, {:ok, store} ->
+      case load_entry(e) do
+        {:ok, p} -> {:cont, {:ok, Map.put(store, p.id, p)}}
+        :error -> {:halt, {:error, :malformed}}
+      end
+    end)
+  end
+
+  defp load_entry(e) do
+    with {:ok, [n, fields_bin, approvals]} <- Encoding.decode([:u8, :bytes, {:list, :bytes}], e),
+         {:ok, kind} <- kind_from_number(n),
+         {:ok, fields} <- decode_fields(kind, fields_bin) do
+      {:ok, %{id: id_of(kind, fields), kind: kind, fields: fields, approvals: approvals}}
+    else
+      _ -> :error
+    end
+  end
+
   @doc "Os tipos de proposta."
   @spec kinds() :: [kind()]
   def kinds, do: Map.keys(@specs)

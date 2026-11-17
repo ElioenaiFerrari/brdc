@@ -24,7 +24,7 @@ Uma **stablecoin brasileira** (1 BRDC = 1 BRL) numa blockchain própria em **Eli
 | `brdc_consensus` | motor BFT sem I/O: rodadas, votos, certificado de commit | 3 |
 | `brdc_p2p` | canal TLS 1.3 mútuo, portas de pares e pública, limites, descoberta | 4 |
 | `brdc_node` | nó (OTP): hoje um validador local com mempool, blocos, porta pública e cliente; depois, vários validadores e disco | 7 |
-| `brdc_dev` | **só desenvolvimento:** nó local de teste e as tarefas `mix brdc.fund` e `mix brdc.balance` | 7 |
+| `brdc_dev` | **só desenvolvimento:** nó local de teste e as tarefas `mix brdc.fund`, `mix brdc.balance`, `mix brdc.type`, `mix brdc.asset` e `mix brdc.devnet.reset` (o nó local grava os blocos em `net/data`) | 7 |
 | `brdc_web` | carteira LiveView (criptografia em JS no navegador; **pronta**: criar, importar, destravar, saldo e envio) e, depois, explorador | 6 |
 
 ## Início rápido
@@ -36,7 +36,7 @@ make docs-check   # confere a documentação
 make              # lista tudo
 ```
 
-Para ver a carteira funcionando (nó local de teste incluído): `make run` e abra `http://localhost:4000`; para financiar um endereço de teste: `make fund ADDR=brdc1… AMOUNT=100`.
+Para ver a carteira funcionando (nó local de teste incluído): `make run` e abra `http://localhost:4000`; para financiar um endereço de teste: `make fund ADDR=brdc1… AMOUNT=100`; a rede de teste **guarda os blocos em disco** (`net/data`) e continua depois de reiniciar; para recomeçar da gênese: `make reset-devnet` (com o nó parado).
 
 Para criar uma rede de teste local (as chaves ficam em `net/`, ignorada pelo git; detalhes no [Fluxo 07](docs/flows/07-keygen-and-genesis.md)):
 
