@@ -22,10 +22,10 @@ test: ## Testes de todos os apps
 
 check: ## Portão de qualidade: formato, credo, testes e criptografia do navegador (o mesmo do CI)
 	mix check
-	node --test apps/brdc_web/assets/js/crypto/crypto.test.mjs 2>&1 | grep -E '^ℹ (tests|pass|fail)|✖'
+	node --test apps/brdc_web/assets/js/crypto/*.test.mjs 2>&1 | grep -E '^ℹ (tests|pass|fail)|✖'
 
 js-test: ## Testa a criptografia do navegador (Node 24, mesmo crypto.subtle) contra os vetores do Elixir
-	node --test apps/brdc_web/assets/js/crypto/crypto.test.mjs
+	node --test apps/brdc_web/assets/js/crypto/*.test.mjs
 
 js-vectors: ## Confere em JavaScript (Node) os mesmos vetores de cripto do Elixir
 	node tools/js/verify-vectors.mjs

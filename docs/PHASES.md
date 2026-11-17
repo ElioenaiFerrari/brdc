@@ -10,7 +10,7 @@ Cada fase só começa com a anterior com testes passando **e documentada**. Ao f
 | 3 | Consenso BFT: motor sem I/O, rodadas, votos, commit, sem blocos vazios, rotação do conjunto, simulações de falha | `brdc_consensus` | **motor pronto** (rotação do conjunto e WAL com o nó) |
 | 4 | P2P: TLS 1.3 mútuo, portas, limites, registros de endereço, descoberta, genesis, roteiro de dois computadores | `brdc_p2p` | **pronta** (canal seguro, limites, banimento, descoberta, porta pública, `keygen` e gênese; o roteiro de dois computadores fica para a Fase 7, com o nó) |
 | 5 | Contratos nativos: bens e propriedade, credenciais (CNH, identificação, casamento, divórcio), contratos entre partes | `brdc_ledger` | **pronta** (bens, credenciais e contratos entre partes; sem persistência em disco, ADR-0012) |
-| 6 | Carteira web: LiveView + criptografia no navegador, cofre cifrado, enviar e receber, emitir e operar bens, contratos e credenciais (assinatura coletiva) | `brdc_web` | **em andamento:** identidade visual e criptografia do navegador prontas; faltam cofre, telas e assinatura coletiva |
+| 6 | Carteira web: LiveView + criptografia no navegador, cofre cifrado, enviar e receber, emitir e operar bens, contratos e credenciais (assinatura coletiva) | `brdc_web` | **em andamento:** identidade visual, criptografia do navegador, cofre cifrado e telas de criar, importar e destravar prontos; faltam saldo e envio contra um nó, as telas de bens, contratos e credenciais, e a assinatura coletiva |
 | 7 | Explorador, ferramentas e testnet: explorador, mix tasks, simuladores, revisão de segurança, runbook | `brdc_node`, `brdc_web` | planejado |
 | Futuro | Stake e validadores abertos, extensão de navegador, Pix/custódia real, votos | | fora de escopo |
 
@@ -30,5 +30,4 @@ Cada fase só começa com a anterior com testes passando **e documentada**. Ao f
 ## Decisões que ainda precisam de você
 - **ADR-0012** (árvore de estado esparsa e armazenamento em disco) continua **Proposto**.
 - **P3:** intervalo de agrupamento de blocos (antes de fechar um bloco com transações pendentes). Entra com o nó (Fase 7).
-- **Passphrase no cofre da carteira:** [ADR-0021](adr/0021-vault-never-stores-passphrase.md) **proposto** (recomendação: nunca guardar); aguarda confirmação.
 - **P7:** bibliotecas OTP por cenário, justificadas uma a uma quando cada uma entrar.

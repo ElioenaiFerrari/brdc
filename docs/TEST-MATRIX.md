@@ -117,12 +117,22 @@ Invariante → teste que o cobre. Linhas *planejadas* ainda não têm teste: ent
 | Formatação de valores: trunca (nunca mostra mais que o saldo), ida e volta nas 6 casas | `brdc_web/test/brdc_web_web/format_test.exs` |
 | CSP estrita: sem `unsafe-inline` nem `unsafe-eval`, sem script em linha | `brdc_web/test/.../page_controller_test.exs` |
 
+## Fase 6, parte do cofre e das telas da carteira (pronta)
+| Invariante | Teste |
+|---|---|
+| Cofre: 600.000 voltas por padrão; só hexadecimal, sem frase, endereço, senha ou passphrase à vista | `assets/js/crypto/vault.test.mjs` |
+| Senha errada ou qualquer campo adulterado (cifra, IV, sal, voltas) é recusado; cofre rebaixado ou absurdo é recusado antes de gastar CPU | `vault.test.mjs` |
+| Senha local fraca é recusada; dois cofres iguais têm sal, IV e cifra diferentes | `vault.test.mjs` |
+| Sessão: a passphrase não é guardada; passphrase diferente avisa que é outra carteira; assinar só destravada; bloqueio por inatividade | `vault.test.mjs` |
+| O painel da carteira não tem campo ligado ao LiveView, nem `name`; o servidor só aceita um endereço válido e ignora frase, senha e passphrase; CSP estrita | `brdc_web/test/brdc_web_web/live/wallet_live_test.exs` |
+| **Verificado à mão (Chrome 153):** criar com validações, IndexedDB sem texto à vista, servidor recebe só o endereço, bloquear, recarregar, senha errada, passphrase diferente, destravar | roteiro manual no Fluxo 13 |
+
 ## Planejado por fase
 | Fase | Invariantes (a testar) |
 |---|---|
 | 3 (resto) | Sem blocos vazios (no nó); rotação do conjunto por mais de 2/3; WAL e recuperação |
 | 7 (inclui o resto da 4) | Roteiro de dois computadores validado |
-| 6 (resto) | Cofre cifrado (AES-GCM) e destravar; frase e passphrase nunca saem do navegador (teste de rede); telas de bens, contratos, credenciais e assinatura coletiva; carteira de ponta a ponta contra uma devnet |
+| 6 (resto) | Teste automatizado de navegador (hook e IndexedDB); saldo, envio e histórico contra um nó; telas de bens, contratos, credenciais e assinatura coletiva; carteira de ponta a ponta contra uma devnet |
 | 7 | Explorador mostra quem assinou cada bloco; roteiro de dois computadores validado |
 
 ## Limites honestos

@@ -1,11 +1,14 @@
 # ADR-0021 — O cofre da carteira nunca guarda a passphrase
 
-**Status:** Proposto (recomendação do assistente; aguarda confirmação do dono do produto) · Complementa o [ADR-0006](0006-web-wallet-liveview-and-browser-crypto.md) e o [ADR-0020](0020-browser-crypto-webcrypto-without-dependencies.md).
+**Status:** Aceito (dono do produto, 2026-11-17) · Complementa o [ADR-0006](0006-web-wallet-liveview-and-browser-crypto.md) e o [ADR-0020](0020-browser-crypto-webcrypto-without-dependencies.md).
 
 ## Contexto
 A carteira guarda a **frase de 24 palavras** cifrada num cofre local (IndexedDB), protegido por uma **senha local**. A **passphrase** (25ª palavra) muda a carteira inteira ([conceito 03](../concepts/03-hd-wallet-and-passphrase.md)). Falta decidir se o cofre a guarda.
 
-## Decisão proposta
+## Estado
+Implementado (cofre sem a passphrase, aviso de "outra carteira" ao destravar) e verificado no navegador.
+
+## Decisão
 **Nunca guardar a passphrase.** O cofre guarda só a frase cifrada. A passphrase é **digitada a cada destravamento**, usada para derivar a semente e mantida só na memória da aba. A tela de destravar pede a senha local e, se a carteira usa passphrase, a passphrase.
 
 ## Alternativa

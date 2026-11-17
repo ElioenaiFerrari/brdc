@@ -65,6 +65,16 @@ config :logger, :default_formatter,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+# Defesa em profundidade: nada que lembre segredo entra em log (a carteira nunca os envia ao servidor).
+config :phoenix, :filter_parameters, [
+  "password",
+  "passphrase",
+  "mnemonic",
+  "seed",
+  "secret",
+  "phrase"
+]
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

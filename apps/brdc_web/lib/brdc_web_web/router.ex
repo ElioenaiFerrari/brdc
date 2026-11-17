@@ -34,7 +34,8 @@ defmodule BrdcWebWeb.Router do
   scope "/", BrdcWebWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    live "/", WalletLive
+    get "/design", PageController, :home
   end
 
   # Other scopes may use custom stacks.

@@ -1,8 +1,8 @@
 defmodule BrdcWebWeb.PageControllerTest do
   use BrdcWebWeb.ConnCase
 
-  test "GET /", %{conn: conn} do
-    conn = get(conn, ~p"/")
+  test "GET /design (pré-visualização)", %{conn: conn} do
+    conn = get(conn, ~p"/design")
     body = html_response(conn, 200)
     assert body =~ "Saldo"
     assert body =~ "Assinaturas pendentes"

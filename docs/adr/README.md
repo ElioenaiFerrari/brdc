@@ -24,7 +24,7 @@ Cada decisão de segurança ou produto vira um ADR: contexto, decisão, alternat
 | [0018](0018-assets-direct-trade-with-veto-window.md) | Bens: classes com órgão, negociação direta e janela de veto | Aceito |
 | [0019](0019-credentials-with-contest-window-and-revocation.md) | Credenciais: tipos com órgão, contestação, validade e revogação | Aceito |
 | [0020](0020-browser-crypto-webcrypto-without-dependencies.md) | Criptografia do navegador: WebCrypto e código próprio, sem dependências (P6) | Aceito |
-| [0021](0021-vault-never-stores-passphrase.md) | O cofre da carteira nunca guarda a passphrase | **Proposto** |
+| [0021](0021-vault-never-stores-passphrase.md) | O cofre da carteira nunca guarda a passphrase | Aceito |
 | [0022](0022-visual-identity-and-wallet-scope.md) | Identidade visual escura com as cores do Brasil e escopo da carteira | Aceito |
 
 ## Decisões PENDENTES (esperam o dono do produto)

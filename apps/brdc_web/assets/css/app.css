@@ -152,6 +152,21 @@ body {
     background: transparent; color: var(--brdc-text); transition: background-color 120ms ease;
   }
   .brdc-key:hover, .brdc-key:active { background: var(--brdc-surface-2); }
+  .brdc-input {
+    width: 100%; min-height: 3rem; padding: 0.625rem 1rem; border-radius: 1rem;
+    background: var(--brdc-surface-2); color: var(--brdc-text);
+    border: 1px solid var(--brdc-line); font-size: 1rem;
+  }
+  .brdc-input::placeholder { color: var(--brdc-muted); }
+  .brdc-input:focus-visible { outline: 2px solid var(--brdc-yellow); outline-offset: 2px; }
+  .brdc-alert {
+    padding: 0.75rem 1rem; border-radius: 1rem; font-size: 0.875rem;
+    background: rgb(255 107 107 / 0.12); color: #ff9a9a; border: 1px solid rgb(255 107 107 / 0.25);
+  }
+  .brdc-warn {
+    padding: 0.75rem 1rem; border-radius: 1rem; font-size: 0.875rem;
+    background: rgb(255 223 0 / 0.10); color: var(--brdc-yellow); border: 1px solid rgb(255 223 0 / 0.25);
+  }
   .brdc-amount { font-variant-numeric: tabular-nums; letter-spacing: -0.02em; font-weight: 700; }
   .brdc-amount .brdc-dim { color: var(--brdc-muted); }
   .brdc-nav-item {

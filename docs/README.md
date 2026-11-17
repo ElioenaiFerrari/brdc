@@ -30,6 +30,7 @@ Um fluxo por funcionalidade (texto e diagrama) em `docs/flows/`, à medida que c
 - [10 — Credenciais (CNH, identificação, casamento e divórcio)](flows/10-credentials.md) (Fase 5)
 - [11 — Contratos entre partes (compra e venda, aluguel, empréstimo)](flows/11-contracts.md) (Fase 5)
 - [12 — Como a carteira assina no navegador](flows/12-browser-signing.md) (Fase 6)
+- [13 — Criar, proteger e destravar a carteira](flows/13-wallet-vault.md) (Fase 6)
 
 A [arquitetura](ARCHITECTURE.md) dá a visão geral.
 
