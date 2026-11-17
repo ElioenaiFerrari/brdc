@@ -94,12 +94,23 @@ defmodule BrdcP2p.Channel do
   @doc "Aceita uma conexão: handshake com chave fixada e `hello`. Recusa quem não é do conjunto."
   @spec accept(:ssl.sslsocket(), config(), keyword()) :: {:ok, t()} | {:error, term()}
   def accept(listener, cfg, opts \\ []) do
-    timeout = Keyword.get(opts, :timeout, 5_000)
-
     with {:ok, transport} <-
-           :ssl.transport_accept(listener, Keyword.get(opts, :accept_timeout, :infinity)),
-         {:ok, socket} <- :ssl.handshake(transport, timeout) do
-      finish(socket, cfg, opts)
+           accept_transport(listener, Keyword.get(opts, :accept_timeout, :infinity)) do
+      upgrade(transport, cfg, opts)
+    end
+  end
+
+  @doc "Aceita só a conexão TCP (o listener checa o IP antes do handshake)."
+  @spec accept_transport(:ssl.sslsocket(), timeout()) ::
+          {:ok, :ssl.sslsocket()} | {:error, term()}
+  def accept_transport(listener, timeout), do: :ssl.transport_accept(listener, timeout)
+
+  @doc "Faz o handshake TLS (chave fixada) e o `hello` numa conexão já aceita."
+  @spec upgrade(:ssl.sslsocket(), config(), keyword()) :: {:ok, t()} | {:error, term()}
+  def upgrade(transport, cfg, opts \\ []) do
+    case :ssl.handshake(transport, Keyword.get(opts, :timeout, 5_000)) do
+      {:ok, socket} -> finish(socket, cfg, opts)
+      {:error, _} = err -> err
     end
   end
 

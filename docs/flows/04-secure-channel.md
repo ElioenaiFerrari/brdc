@@ -36,7 +36,7 @@ Dois validadores abrem uma conexão TCP, fazem TLS 1.3 com autenticação dos do
 `apps/brdc_p2p/test/brdc_p2p/channel_test.exs`: conversa entre dois validadores, cliente fora do conjunto, servidor impostor, rede e genesis diferentes, rotação do conjunto sem reiniciar, quadro gigante, par calado, certificado. Rodado 15 vezes seguidas sem falha.
 
 ## Limites honestos
-- **Fatia da Fase 4:** ainda **não** há limites de conexão por IP/chave, pontos e banimento, registros de endereço assinados, descoberta, porta pública, `keygen`/`genesis` nem o roteiro de dois computadores. Estão **planejados**.
+- Limites e banimento: [Fluxo 05](05-limits-and-bans.md). Ainda **planejados**: registros de endereço assinados, descoberta, porta pública, `keygen`/`genesis` e o roteiro de dois computadores.
 - A chave de consenso também assina o TLS (reuso de chave documentado no ADR-0015).
 - Superfície X.509 do OTP; sem auditoria externa do nosso uso.
 - Testado numa só máquina (localhost); entre computadores ainda não.

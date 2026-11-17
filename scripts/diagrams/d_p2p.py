@@ -18,3 +18,22 @@ def secure_channel():
     d.text(60, 428, "No TLS 1.3 o cliente pode terminar antes do servidor validar: só vale depois do hello.", 11, MUTED)
     d.legend([(LINK, "canal", False), (MUTED, "verificação", False), (BOTO, "resultado", False)])
     return d
+
+
+def limits_and_bans():
+    d = D("limits-and-bans", 1100, 560, "Limites e banimento na porta de pares", "O IP é checado antes do handshake e a chave depois; ofensas somam pontos até o banimento temporário", "FLUXO 05")
+    d.arrow([(280, 168), (420, 168)], "link", label="IP banido ou cheio?", at=(350, 150))
+    d.arrow([(640, 168), (780, 168)], "default", label="handshake + hello", at=(710, 150))
+    d.arrow([(890, 206), (890, 290)], "default", label="chave banida ou cheia?", at=(890, 250))
+    d.arrow([(780, 328), (640, 328)], "default", label="mensagens", at=(710, 310))
+    d.arrow([(420, 328), (280, 328)], "boto", label="pontos > limite", at=(350, 310))
+    d.node(60, 130, 220, 76, "Conexão TCP", "listener.ex", "external", "chega", sub2="de qualquer IP")
+    d.node(420, 130, 220, 76, "Admissão por IP", "limits.ex · Guard", "link", "antes do handshake")
+    d.node(780, 130, 220, 76, "Canal TLS", "channel.ex", "plain", "chave no conjunto")
+    d.node(780, 290, 220, 76, "Admissão por chave", "limits.ex · Guard", "focal", "máx. por validador")
+    d.node(420, 290, 220, 76, "Sessão", "session.ex", "plain", "taxa e tamanho")
+    d.node(60, 290, 220, 76, "Banimento temporário", "chave (e IP, exceto loopback)", "boto", "expira sozinho")
+    d.text(60, 410, "Quadro gigante bane de uma vez; mau hello, malformado e excesso de taxa somam pontos.", 11, INK, weight=600)
+    d.text(60, 428, "Loopback nunca é banido por IP: todos os nós de uma máquina de testes dividem o endereço.", 11, MUTED)
+    d.legend([(LINK, "admissão", False), (MUTED, "sessão", False), (BOTO, "punição", False)])
+    return d

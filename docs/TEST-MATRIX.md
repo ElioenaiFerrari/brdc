@@ -45,7 +45,7 @@ Invariante → teste que o cobre. Linhas *planejadas* ainda não têm teste: ent
 | Equivocação vira evidência; `inspect` não mostra a chave | `consensus_test.exs` (`motor isolado`) |
 | Certificado: sem quórum, voto repetido, estranho, assinatura ruim, bloco diferente e outra rede falham | `consensus_test.exs` (`certificado`) |
 
-## Fase 4 (em andamento: canal seguro pronto)
+## Fase 4 (em andamento: canal seguro, limites e banimento prontos)
 | Invariante | Teste |
 |---|---|
 | Dois validadores do conjunto conversam e cada um vê a chave do outro | `brdc_p2p/test/brdc_p2p/channel_test.exs` |
@@ -55,13 +55,18 @@ Invariante → teste que o cobre. Linhas *planejadas* ainda não têm teste: ent
 | Quadro gigante é recusado antes de ler o conteúdo; par calado estoura o prazo; separação de quadros | `channel_test.exs` (`limites`) |
 | O certificado carrega a chave de consenso e só aceita Ed25519 | `channel_test.exs` (`certificado`) |
 
-*Falta da Fase 4:* limites por IP/chave, banimento, registros de endereço, descoberta, porta pública, `keygen`/`genesis` e o roteiro de dois computadores.
+| Tetos total, por IP e por chave nunca são ultrapassados (propriedade); liberar devolve a vaga | `limits_test.exs`, `listener_test.exs` |
+| Pontos somam até o ban; ban expira; pontos são esquecidos; quadro gigante bane de uma vez | `limits_test.exs` |
+| Loopback nunca é banido por IP, mas a chave é; intruso repetido em loopback não derruba ninguém | `limits_test.exs`, `listener_test.exs` |
+| Balde de fichas: rajada, recusa, reposição; nunca passa da taxa (propriedade); excesso vira ponto | `limits_test.exs`, `listener_test.exs` |
+
+*Falta da Fase 4:* registros de endereço assinados, descoberta, porta pública, `keygen`/`genesis` e o roteiro de dois computadores.
 
 ## Planejado por fase
 | Fase | Invariantes (a testar) |
 |---|---|
 | 3 (resto) | Sem blocos vazios (no nó); rotação do conjunto por mais de 2/3; WAL e recuperação |
-| 4 (resto) | Limites e banimento; registros de endereço assinados e atualizados; porta pública com limites |
+| 4 (resto) | Registros de endereço assinados e atualizados; descoberta; porta pública com limites |
 | 5 | Bens: transferência só pelo dono, escrow e veto; credenciais: janela de contestação, validade, veto, revogação, privada vs pública; casamento por cônjuge e divórcio revoga casamento; contratos: só as transições do modelo, valores em escrow conservados |
 | 6 | Carteira: frase e passphrase nunca saem do navegador; cofre cifrado; assinatura no navegador aceita pelo nó; CSP sem scripts de terceiros |
 | 7 | Explorador mostra quem assinou cada bloco; roteiro de dois computadores validado |

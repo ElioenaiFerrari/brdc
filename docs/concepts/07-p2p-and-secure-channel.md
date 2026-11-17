@@ -28,7 +28,7 @@ Ao aceitar certificados autoassinados é fácil escrever uma verificação que *
 O cliente **não confia** no nó: reverifica assinaturas e provas, então um nó mentiroso é detectado, não obedecido.
 
 ## Defesas
-Teto de conexões (total, por IP, por chave), prazo de handshake, tamanho máximo por tipo de mensagem, taxa por sessão, **pontos por mau comportamento e banimento temporário**, e **registros de endereço assinados** para descobrir onde cada validador está sem editar arquivos.
+Teto de conexões (total, por IP, por chave; loopback nunca é banido por IP, [Fluxo 05](../flows/05-limits-and-bans.md)), prazo de handshake, tamanho máximo por tipo de mensagem, taxa por sessão, **pontos por mau comportamento e banimento temporário**, e **registros de endereço assinados** para descobrir onde cada validador está sem editar arquivos.
 
 ## Por que não a distribuição da BEAM?
 Em Erlang/Elixir, nós conectados por distribuição **executam código uns nos outros**: ótimo entre máquinas suas, inadequado para participantes que não confiam entre si ([ADR-0007](../adr/0007-p2p-tcp-with-noise.md)).

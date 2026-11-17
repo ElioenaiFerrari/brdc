@@ -21,6 +21,7 @@ Um fluxo por funcionalidade (texto e diagrama) em `docs/flows/`, à medida que c
 - [02 — Como um bloco é executado](flows/02-block-execution.md) (Fase 2)
 - [03 — Uma rodada de consenso](flows/03-consensus-round.md) (Fase 3)
 - [04 — Como dois validadores se conectam](flows/04-secure-channel.md) (Fase 4, em andamento)
+- [05 — Limites e banimento na porta de pares](flows/05-limits-and-bans.md) (Fase 4, em andamento)
 
 A [arquitetura](ARCHITECTURE.md) dá a visão geral.
 
