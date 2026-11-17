@@ -38,3 +38,5 @@ Termos em ordem alfabética. Termos novos entram aqui no mesmo trabalho que os i
 - **Autocustódia (carteira não custodial):** só o usuário guarda as chaves. A frase e a passphrase nascem no navegador e nunca vão para o servidor; ninguém (nem a equipe da BRDC) consegue assinar por ele ou recuperar a conta. Perdeu a frase, perdeu o acesso.
 - **Credencial:** declaração de um órgão sobre um titular (CNH, identidade, casamento…), com janela de contestação, validade e revogação (ADR-0019).
 - **Compromisso:** hash de 32 bytes dos dados privados de uma credencial; quem recebe os dados confere contra ele.
+- **Contrato entre partes:** acordo entre duas partes executado por um modelo (compra e venda, aluguel, empréstimo) escrito como dado e interpretado por um motor de vocabulário fechado (ADR-0017).
+- **Escrow:** dinheiro retido pela chain até uma regra liberar; sai da conta de quem pagou e fica no contrato ou na negociação.

@@ -34,6 +34,7 @@ defmodule BrdcNode.Genesis do
     asset_register_fee: 50_000,
     asset_step_fee: 20_000,
     credential_fee: 10_000,
+    contract_fee: 10_000,
     bootstrap: []
   ]
 
@@ -62,7 +63,10 @@ defmodule BrdcNode.Genesis do
          :ok <- check_authorities(g),
          :ok <-
            check(
-             Enum.all?([g.asset_register_fee, g.asset_step_fee, g.credential_fee], &u64?/1),
+             Enum.all?(
+               [g.asset_register_fee, g.asset_step_fee, g.credential_fee, g.contract_fee],
+               &u64?/1
+             ),
              :bad_fees
            ),
          :ok <- check_bootstrap(g) do
@@ -100,6 +104,7 @@ defmodule BrdcNode.Genesis do
           :u64,
           :u64,
           :u64,
+          :u64,
           {:list, :bytes}
         ],
         [
@@ -120,6 +125,7 @@ defmodule BrdcNode.Genesis do
           g.asset_register_fee,
           g.asset_step_fee,
           g.credential_fee,
+          g.contract_fee,
           boot
         ]
       )
@@ -146,7 +152,8 @@ defmodule BrdcNode.Genesis do
         authority_threshold: g.authority_threshold,
         asset_register_fee: g.asset_register_fee,
         asset_step_fee: g.asset_step_fee,
-        credential_fee: g.credential_fee
+        credential_fee: g.credential_fee,
+        contract_fee: g.contract_fee
       )
 
     p
@@ -184,7 +191,8 @@ defmodule BrdcNode.Genesis do
         "per_byte" => g.per_byte,
         "asset_register" => g.asset_register_fee,
         "asset_step" => g.asset_step_fee,
-        "credential" => g.credential_fee
+        "credential" => g.credential_fee,
+        "contract" => g.contract_fee
       },
       "block_limits" => %{"max_txs" => g.max_block_txs, "max_bytes" => g.max_block_bytes},
       "windows_seconds" => %{
@@ -221,6 +229,7 @@ defmodule BrdcNode.Genesis do
              asset_register_fee: get_in(m, ["fees", "asset_register"]),
              asset_step_fee: get_in(m, ["fees", "asset_step"]),
              credential_fee: get_in(m, ["fees", "credential"]),
+             contract_fee: get_in(m, ["fees", "contract"]),
              authorities: authorities,
              authority_threshold: m["authority_threshold"],
              max_block_txs: get_in(m, ["block_limits", "max_txs"]),

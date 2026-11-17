@@ -20,6 +20,7 @@ defmodule BrdcLedger.State do
             classes: %{},
             cred_types: %{},
             credentials: %{},
+            contracts: %{},
             assets: %{},
             deals: %{},
             escrow: 0,
@@ -37,6 +38,7 @@ defmodule BrdcLedger.State do
           classes: %{String.t() => map()},
           cred_types: %{String.t() => map()},
           credentials: %{String.t() => map()},
+          contracts: %{String.t() => map()},
           assets: %{String.t() => map()},
           deals: %{String.t() => map()},
           escrow: non_neg_integer(),
@@ -134,6 +136,7 @@ defmodule BrdcLedger.State do
           {:fixed, 32},
           :u64,
           {:fixed, 32},
+          {:fixed, 32},
           {:fixed, 32}
         ],
         [
@@ -152,7 +155,8 @@ defmodule BrdcLedger.State do
             merkle(deal_leaves(s)),
             s.escrow,
             merkle(type_leaves(s)),
-            merkle(cred_leaves(s))
+            merkle(cred_leaves(s)),
+            merkle(contract_leaves(s))
           ]
       )
     )
@@ -226,6 +230,31 @@ defmodule BrdcLedger.State do
         )
       )
     end
+  end
+
+  defp contract_leaves(s) do
+    for {id, c} <- Enum.sort(s.contracts) do
+      Hash.tagged(
+        "brdc/state/contract",
+        Encoding.encode(
+          [
+            :string,
+            :string,
+            {:fixed, 32},
+            {:fixed, 32},
+            {:list, :bytes},
+            :string,
+            :u64,
+            {:list, :bytes}
+          ],
+          [id, c.template, c.a, c.b, kv(c.terms), Atom.to_string(c.state), c.escrow, kv(c.vars)]
+        )
+      )
+    end
+  end
+
+  defp kv(map) do
+    for {k, v} <- Enum.sort(map), do: Encoding.encode([:string, :u64], [Atom.to_string(k), v])
   end
 
   defp deal_leaves(s) do

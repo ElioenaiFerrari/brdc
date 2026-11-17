@@ -52,6 +52,7 @@ defmodule BrdcNode.GenesisTest do
           [asset_register_fee: 1],
           [asset_step_fee: 1],
           [credential_fee: 1],
+          [contract_fee: 1],
           [contest_window: 120],
           [veto_window: 120],
           [min_window: 30],
@@ -86,6 +87,7 @@ defmodule BrdcNode.GenesisTest do
     assert {:error, :bad_authorities} = Genesis.new(base(authorities: [<<1>>]))
     assert {:error, :bad_fees} = Genesis.new(base(asset_step_fee: -1))
     assert {:error, :bad_fees} = Genesis.new(base(credential_fee: -1))
+    assert {:error, :bad_fees} = Genesis.new(base(contract_fee: -1))
     assert {:ok, _} = Genesis.new(base(authorities: [key(20), key(21)], authority_threshold: 2))
     assert {:error, :bad_windows} = Genesis.new(base(contest_window: 10))
     assert {:error, :bad_windows} = Genesis.new(base(veto_window: 99_999_999_999))
@@ -132,7 +134,7 @@ defmodule BrdcNode.GenesisTest do
     withauth = Genesis.ledger_params(g!(authorities: [key(20), key(21)], authority_threshold: 2))
     assert withauth.authorities == [key(20), key(21)] and withauth.authority_threshold == 2
     assert withauth.asset_register_fee == 50_000 and withauth.asset_step_fee == 20_000
-    assert withauth.credential_fee == 10_000
+    assert withauth.credential_fee == 10_000 and withauth.contract_fee == 10_000
 
     short = Genesis.ledger_params(g!(contest_window: 60, veto_window: 60))
     assert short.contest_window == 60 and short.veto_window == 60

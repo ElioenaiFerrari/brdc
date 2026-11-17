@@ -9,7 +9,7 @@ Cada fase só começa com a anterior com testes passando **e documentada**. Ao f
 | 2 | Livro-razão e a moeda: contas, transação, bloco, estado, transferência, taxa, reservas e mint/burn por emissores M-de-N, invariantes por propriedade | `brdc_ledger` | **pronta** (persistência em disco fica com o ADR-0012) |
 | 3 | Consenso BFT: motor sem I/O, rodadas, votos, commit, sem blocos vazios, rotação do conjunto, simulações de falha | `brdc_consensus` | **motor pronto** (rotação do conjunto e WAL com o nó) |
 | 4 | P2P: TLS 1.3 mútuo, portas, limites, registros de endereço, descoberta, genesis, roteiro de dois computadores | `brdc_p2p` | **pronta** (canal seguro, limites, banimento, descoberta, porta pública, `keygen` e gênese; o roteiro de dois computadores fica para a Fase 7, com o nó) |
-| 5 | Contratos nativos: bens e propriedade, credenciais (CNH, identificação, casamento, divórcio), contratos entre partes | `brdc_ledger` | **em andamento: bens e credenciais prontos** (contratos entre partes pendentes) |
+| 5 | Contratos nativos: bens e propriedade, credenciais (CNH, identificação, casamento, divórcio), contratos entre partes | `brdc_ledger` | **pronta** (bens, credenciais e contratos entre partes; sem persistência em disco, ADR-0012) |
 | 6 | Carteira web: LiveView + criptografia no navegador, cofre cifrado, enviar e receber, assinar contratos | `brdc_web` | planejado |
 | 7 | Explorador, ferramentas e testnet: explorador, mix tasks, simuladores, revisão de segurança, runbook | `brdc_node`, `brdc_web` | planejado |
 | Futuro | Stake e validadores abertos, extensão de navegador, Pix/custódia real, votos | | fora de escopo |

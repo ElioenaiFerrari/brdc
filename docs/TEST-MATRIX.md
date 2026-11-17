@@ -96,12 +96,21 @@ Invariante → teste que o cobre. Linhas *planejadas* ainda não têm teste: ent
 | Taxas: emissão e revogação 0,01; tipo 0,05; resto sem mínimo | `credentials_test.exs` (`taxas`) |
 | **Em qualquer sequência:** ids não se repetem, só ativo é válido, divórcio ativo deixa o casamento revogado | `credentials_test.exs` (`propriedade`) |
 
+## Fase 5, parte de contratos entre partes (pronta)
+| Invariante | Teste |
+|---|---|
+| Compra e venda: aceite trava o preço; confirmação libera ao vendedor; vendedor devolve; depois do prazo devolve ao comprador; quem pode o quê e em que estado | `brdc_ledger/test/brdc_ledger/contracts_test.exs` (`compra e venda`) |
+| Aluguel: caução em escrow, parcelas direto ao locador, liquidação (caução cobre parcelas em aberto, resto volta), liberação antecipada só com tudo pago, termos inválidos | `contracts_test.exs` (`aluguel`) |
+| Empréstimo: credor trava o principal ao criar, devedor aceita e recebe e devolve, atraso só registrado, cancelamento recupera o principal | `contracts_test.exs` (`empréstimo`) |
+| Criação: modelo, id, parte, termos, taxa e carga malformada são validados | `contracts_test.exs` (`criação`) |
+| **Os modelos são dados com vocabulário fechado**: nenhum estado, ator, condição, efeito ou expressão desconhecidos | `contracts_test.exs` (`os modelos são dados…`) |
+| **Em qualquer sequência:** escrow global = soma dos escrows dos contratos; estado final sem dinheiro retido; nada é criado | `contracts_test.exs` (`propriedade`) |
+
 ## Planejado por fase
 | Fase | Invariantes (a testar) |
 |---|---|
 | 3 (resto) | Sem blocos vazios (no nó); rotação do conjunto por mais de 2/3; WAL e recuperação |
 | 7 (inclui o resto da 4) | Roteiro de dois computadores validado |
-| 5 (resto) | Contratos entre partes: só as transições do modelo, valores em escrow conservados |
 | 6 | Carteira: frase e passphrase nunca saem do navegador; cofre cifrado; assinatura no navegador aceita pelo nó; CSP sem scripts de terceiros |
 | 7 | Explorador mostra quem assinou cada bloco; roteiro de dois computadores validado |
 

@@ -27,6 +27,7 @@ Um fluxo por funcionalidade (texto e diagrama) em `docs/flows/`, à medida que c
 - [08 — Porta pública para carteira e explorador](flows/08-public-port.md) (Fase 4)
 - [09 — Transferência de propriedade de um bem](flows/09-asset-trade.md) (Fase 5)
 - [10 — Credenciais (CNH, identificação, casamento e divórcio)](flows/10-credentials.md) (Fase 5)
+- [11 — Contratos entre partes (compra e venda, aluguel, empréstimo)](flows/11-contracts.md) (Fase 5)
 
 A [arquitetura](ARCHITECTURE.md) dá a visão geral.
 

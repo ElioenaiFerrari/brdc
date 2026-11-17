@@ -92,3 +92,6 @@ make              # lista os atalhos
 ## Fora de escopo por ora
 
 Votos e eleições · integração bancária real (Pix/custódia) · validade jurídica · auditoria · hardware wallet · extensão de navegador · validadores abertos com stake (futuro).
+
+## Skills do projeto
+Copiadas do Teko (`.agents/skills/`, com links em `.claude/skills/` e o `skills-lock.json`): `diagram-design` (**obrigatória para diagramas**), `ui-ux-pro-max`, `ui-styling`, `design`, `design-system`, `brand`, `banner-design`, `slides`, `security-audit` e `security-and-hardening`. A `rust-async-patterns` do Teko ficou de fora (o BRDC é Elixir). Para interface web (Fase 6), usar `ui-ux-pro-max` e `ui-styling`; para revisão de segurança (Fase 7 e revisão final), `security-audit`.

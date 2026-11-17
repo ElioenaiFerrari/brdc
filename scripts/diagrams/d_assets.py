@@ -36,3 +36,22 @@ def credential_lifecycle():
     d.text(60, 428, "A chain prova quem declarou o quê e quando; não prova que a declaração é verdadeira.", 11, MUTED)
     d.legend([(LINK, "emissão", False), (MUTED, "ciclo normal", False), (BOTO, "saídas", False)])
     return d
+
+
+def contract_engine():
+    d = D("contract-engine", 1100, 560, "Contratos entre partes: modelos como dados", "Um motor pequeno interpreta modelos de vocabulário fechado: sem código de terceiros e sem VM", "FLUXO 11")
+    d.arrow([(280, 168), (420, 168)], "link", label="escolhe o modelo", at=(350, 150))
+    d.arrow([(640, 168), (780, 168)], "default", label="a ou b age", at=(710, 150))
+    d.arrow([(890, 206), (890, 290)], "default", label="passou? então aplica", at=(890, 250))
+    d.arrow([(780, 328), (640, 328)], "default", label="em ordem", at=(710, 310))
+    d.arrow([(420, 328), (280, 328)], "boto", label="tudo ou nada", at=(350, 310))
+    d.node(60, 130, 220, 76, "Criar (tipo 20)", "parte A + termos numéricos", "onca", "3 modelos", sub2="compra-venda · aluguel · empréstimo")
+    d.node(420, 130, 220, 76, "Modelo = dados", "estados, atores, prazos", "focal", "contract_templates.ex")
+    d.node(780, 130, 220, 76, "Agir (tipo 21)", "uma transição do modelo", "link", "contracts.ex")
+    d.node(780, 290, 220, 76, "Confere", "estado, ator e prazo", "plain", "recusa o resto")
+    d.node(420, 290, 220, 76, "Efeitos", "travar · liberar · pagar", "store", "vocabulário fechado")
+    d.node(60, 290, 220, 76, "Novo estado", "escrow conservado", "boto", "ou nada muda")
+    d.text(60, 410, "Compra e venda: escrow volta ao comprador se não confirmar no prazo. Aluguel: caução cobre parcelas em aberto.", 11, INK, weight=600)
+    d.text(60, 428, "Empréstimo: sem garantia, o atraso é só registrado. A chain não arbitra disputas.", 11, MUTED)
+    d.legend([(LINK, "criação e ação", False), (MUTED, "validação e efeitos", False), (BOTO, "resultado", False)])
+    return d

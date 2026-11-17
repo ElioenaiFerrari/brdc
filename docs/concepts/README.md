@@ -18,5 +18,6 @@ Leia na ordem; cada uma se apoia na anterior.
 12. [Como ler o código da Fase 3](12-reading-phase-3-code.md): mapa de leitura de `brdc_consensus`.
 13. [Como ler o código da Fase 5, parte de bens](13-reading-phase-5a-code.md): mapa de leitura de bens e propriedade.
 14. [Como ler o código da Fase 5, parte de credenciais](14-reading-phase-5b-code.md): mapa de leitura de credenciais.
+15. [Como ler o código da Fase 5, parte de contratos](15-reading-phase-5c-code.md): os modelos como dados e o motor.
 
 Termos novos estão no [GLOSSARY](../GLOSSARY.md). Ao fim de cada fase de implementação, a página correspondente ganha a seção **"Como ler o código desta fase"**.
