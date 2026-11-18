@@ -39,6 +39,7 @@ defmodule Mix.Tasks.Brdc do
       mix brdc.compose.up                        constrói a imagem, sobe tudo e espera a rede andar
       mix brdc.compose.status                    altura, pares, motor de consenso, evidências e pendentes
       mix brdc.compose.equivocate                o equivocador toma o lugar do último validador e confere a detecção
+      mix brdc.compose.load [--rates …]          teste de carga em degraus (latência de confirmação, CPU, throttling, OOM)
       mix brdc.compose.down [--volumes]          derruba (com --volumes apaga também os blocos)
 
     Explorador (somente leitura; fluxo 20) e rede entre computadores (fluxo 21)

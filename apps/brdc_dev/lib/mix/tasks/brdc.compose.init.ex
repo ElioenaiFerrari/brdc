@@ -5,10 +5,10 @@ defmodule Mix.Tasks.Brdc.Compose.Init do
   nomes dos serviços (`v1`, `v2`…) como pares, o `docker-compose.yml` com **recursos limitados**, o `.env` e
   `lab.json`. Nunca sobrescreve chaves nem gênese.
 
-      mix brdc.compose.init [--validators 4] [--wallets 2] [--cpus 0.5] [--memory 192m]
+      mix brdc.compose.init [--validators 4] [--wallets 2] [--cpus 0.5] [--memory 384m]
                             [--wallet-memory 256m] [--base-port 4700] [--wallet-port 4100] [--dir compose]
 
-  Orçamento padrão: 4 validadores e 2 carteiras = **3 CPUs e 1,3 GB no máximo**. As portas ficam só em
+  Orçamento padrão: 4 validadores e 2 carteiras = **3 CPUs e 2,0 GB no máximo**. As portas ficam só em
   `127.0.0.1` e são diferentes das da rede local (`4545` e `4000`). O número de validadores é decidido aqui e não
   muda (outro número é outra rede: apague a pasta). Só rede de teste.
   """
@@ -85,7 +85,7 @@ defmodule Mix.Tasks.Brdc.Compose.Init do
     do:
       if(v =~ ~r/\A\d{2,5}[mg]\z/,
         do: :ok,
-        else: Mix.raise("--#{key} inválido: #{v} (exemplos: 192m, 1g)")
+        else: Mix.raise("--#{key} inválido: #{v} (exemplos: 384m, 1g)")
       )
 
   defp cpus!(nil), do: :ok

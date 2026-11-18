@@ -41,6 +41,7 @@ Um fluxo por funcionalidade (texto e diagrama) em `docs/flows/`, à medida que c
 - [21 — Rede de teste em dois computadores](flows/21-two-computers.md) (Fase 7)
 - [22 — Laboratório Docker: vários nós, com recursos limitados](flows/22-docker-lab.md) (Fase 7)
 - [23 — Equivocação: um validador assina dois votos conflitantes](flows/23-equivocation.md) (Fase 7)
+- [24 — Teste de carga do laboratório Docker](flows/24-load-test.md) (Fase 7)
 
 A [arquitetura](ARCHITECTURE.md) dá a visão geral.
 

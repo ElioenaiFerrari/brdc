@@ -277,7 +277,9 @@ defmodule BrdcNode.Client do
   end
 
   @doc """
-  O consenso do nó, como ele vê: `%{height, engine, connected, evidence, pending}`. `engine` é `nil` quando a
+  O consenso do nó, como ele vê: `%{height, engine, connected, evidence, pending, gossip}`. `gossip` é o que
+  aconteceu com as transações que chegaram **por fofoca de outros nós**: `%{ok, duplicate, rejected}` (`rejected` é um
+  mapa motivo -> quantas; uma recusa por nonce fora de ordem aparece aqui). `engine` é `nil` quando a
   rede está parada (não há bloco vazio) ou `%{height, round, step}` quando decide uma altura; `connected` são as
   chaves dos pares com sessão aberta agora; `evidence` conta equivocações detectadas (só em memória). Um nó sem
   consenso (solo) responde `{:error, "no_consensus"}`.
@@ -285,9 +287,21 @@ defmodule BrdcNode.Client do
   @spec consensus_info(endpoint()) :: {:ok, map()} | {:error, term()}
   def consensus_info({host, port}) do
     with {:ok, bin} <- PublicPort.request(host, port, :query, <<15>>),
-         {:ok, [height, has_engine, eh, er, step, connected, evidence, pending]} <-
+         {:ok, [height, has_engine, eh, er, step, connected, evidence, pending, ok, dup, rej]} <-
            Encoding.decode(
-             [:u64, :u8, :u64, :u32, :string, {:list, {:fixed, 32}}, :u32, :u32],
+             [
+               :u64,
+               :u8,
+               :u64,
+               :u32,
+               :string,
+               {:list, {:fixed, 32}},
+               :u32,
+               :u32,
+               :u64,
+               :u64,
+               {:list, :bytes}
+             ],
              bin
            ) do
       engine = if has_engine == 1, do: %{height: eh, round: er, step: step}, else: nil
@@ -298,12 +312,20 @@ defmodule BrdcNode.Client do
          engine: engine,
          connected: connected,
          evidence: evidence,
-         pending: pending
+         pending: pending,
+         gossip: %{ok: ok, duplicate: dup, rejected: decode_rejected(rej)}
        }}
     else
       {:error, _} = err -> err
       _ -> {:error, :bad_response}
     end
+  end
+
+  defp decode_rejected(rows) do
+    for row <- rows,
+        {:ok, [reason, n]} <- [Encoding.decode([:string, :u64], row)],
+        into: %{},
+        do: {reason, n}
   end
 
   @doc "As chaves dos validadores em vigor, **segundo o nó** (para conferir, fixe as da gênese)."

@@ -132,6 +132,12 @@ defmodule BrdcNode.ValidatorTest do
     for v <- vs do
       assert {:ok, %{height: 1, evidence: 0, pending: 0}} = Client.consensus_info(endpoint(v))
     end
+
+    # fofoca: a transação entrou por UM nó e chegou aos outros 3 por fofoca (cada um a aceita uma vez; as cópias
+    # que vêm dos outros pares são duplicatas) e nada foi recusado
+    infos = for v <- vs, do: elem(Client.consensus_info(endpoint(v)), 1).gossip
+    assert infos |> Enum.map(& &1.ok) |> Enum.sum() == 3
+    assert Enum.all?(infos, &(&1.rejected == %{}))
   end
 
   test "nó sem consenso (solo) responde que não tem consenso", %{tmp_dir: dir} do

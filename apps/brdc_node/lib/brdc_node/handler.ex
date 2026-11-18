@@ -52,7 +52,19 @@ defmodule BrdcNode.Handler do
   @block_row [:u64, :u64, {:fixed, 32}, {:fixed, 32}, :u32, :u32]
   @tx_row [:u64, :u32, :u64, {:fixed, 32}, :bytes]
   @history_row [{:fixed, 32}, :u64, :u64, :u8, :u8]
-  @consensus [:u64, :u8, :u64, :u32, :string, {:list, {:fixed, 32}}, :u32, :u32]
+  @consensus [
+    :u64,
+    :u8,
+    :u64,
+    :u32,
+    :string,
+    {:list, {:fixed, 32}},
+    :u32,
+    :u32,
+    :u64,
+    :u64,
+    {:list, :bytes}
+  ]
   @max_contracts 100
   @account [:u64, :u64, :u64, :u64]
 
@@ -80,7 +92,10 @@ defmodule BrdcNode.Handler do
        if(step, do: Atom.to_string(step), else: ""),
        i.connected,
        i.evidence,
-       i.pending
+       i.pending,
+       i.gossip.ok,
+       i.gossip.duplicate,
+       for({reason, n} <- i.gossip.rejected, do: Encoding.encode([:string, :u64], [reason, n]))
      ])}
   end
 

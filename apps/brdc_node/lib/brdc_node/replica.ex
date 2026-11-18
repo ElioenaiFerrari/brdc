@@ -104,7 +104,9 @@ defmodule BrdcNode.Replica do
       syncing: nil,
       start_timer: nil,
       waiting_block: nil,
-      evidence: []
+      evidence: [],
+      # o que aconteceu com as transações que CHEGARAM por fofoca: aceitas, duplicadas ou recusadas (por motivo)
+      gossip: %{ok: 0, duplicate: 0, rejected: %{}}
     }
 
     Node.set_tx_hook(node, self())
@@ -147,6 +149,7 @@ defmodule BrdcNode.Replica do
        peers: Map.keys(s.peer_heights),
        connected: Peers.connected(s.peers),
        evidence: length(s.evidence),
+       gossip: s.gossip,
        pending: Node.status(s.node).pending
      }, s}
   end
@@ -374,8 +377,7 @@ defmodule BrdcNode.Replica do
 
   # transação de um par: o nó a valida; se for nova, o gancho a espalha de volta (duplicada é descartada)
   defp peer_msg(s, _from, {:tx, bin}) do
-    _ = Node.submit(s.node, bin)
-    s
+    %{s | gossip: count_gossip(s.gossip, Node.submit(s.node, bin))}
   end
 
   defp peer_msg(s, from, {:proposal, %Proposal{height: h} = p}) do
@@ -418,6 +420,12 @@ defmodule BrdcNode.Replica do
   defp peer_msg(s, from, {:blocks, list}), do: apply_blocks(s, from, list)
 
   # mensagem de consenso da altura em curso com a réplica parada: começa agora
+  defp count_gossip(g, {:ok, _}), do: %{g | ok: g.ok + 1}
+  defp count_gossip(g, {:error, :duplicate}), do: %{g | duplicate: g.duplicate + 1}
+
+  defp count_gossip(g, {:error, reason}),
+    do: %{g | rejected: Map.update(g.rejected, inspect(reason), 1, &(&1 + 1))}
+
   defp ensure_started(%{engine: nil} = s) do
     if s.start_timer, do: Process.cancel_timer(s.start_timer)
     start_height(%{s | start_timer: nil})

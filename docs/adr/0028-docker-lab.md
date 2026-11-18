@@ -10,7 +10,7 @@ Os testes da rede de vários validadores rodavam todos os nós **dentro de uma s
 - **Base de build e de runtime da mesma distribuição** (a release leva o Erlang): `elixir:1.20.4-otp-29-slim` (Debian 13) e `debian:trixie-slim`. Usuário sem privilégios.
 - **Ferramentas de cliente no computador**, não na imagem: `mix brdc.*` com `--host/--port` e `--dir compose/net`. Sem `mix` em tempo de execução.
 - **Gênese com os nomes dos serviços** como pares de partida; cada validador monta **só a própria semente** (as dos emissores e autoridades ficam no computador).
-- **Recursos limitados por serviço** (CPU, memória, swap igual, processos), `cap_drop: [ALL]`, raiz somente leitura, portas **só em `127.0.0.1`** e diferentes das da rede local. Orçamento padrão (4 validadores + 2 carteiras): **3 CPUs e 1,3 GB**.
+- **Recursos limitados por serviço** (CPU, memória, swap igual, processos), `cap_drop: [ALL]`, raiz somente leitura, portas **só em `127.0.0.1`** e diferentes das da rede local. Orçamento padrão (4 validadores + 2 carteiras): **3 CPUs e 2,0 GB** (384 MiB por validador, definido pelo teste de carga: com 192 MiB os validadores morriam por falta de memória entre 100 e 200 tx/s).
 - O compose é **gerado por uma função pura** (`BrdcDev.Compose.render/1`), testável sem Docker.
 
 ## Consequências

@@ -21,7 +21,7 @@ mix brdc.compose.up              # build da imagem (1ª vez demora), sobe tudo e
 mix brdc.compose.status          # por validador: altura, pares, motor de consenso, evidências, pendentes
 mix brdc.compose.down [--volumes]
 ```
-Opções da `init`: `--validators 4`, `--wallets 2`, `--cpus 0.5`, `--memory 192m`, `--wallet-memory 256m`, `--base-port 4700`, `--wallet-port 4100`, `--dir compose`. O número de validadores é decidido na gênese e não muda (outro número é outra rede: apague a pasta).
+Opções da `init`: `--validators 4`, `--wallets 2`, `--cpus 0.5`, `--memory 384m`, `--wallet-memory 256m`, `--base-port 4700`, `--wallet-port 4100`, `--dir compose`. O número de validadores é decidido na gênese e não muda (outro número é outra rede: apague a pasta).
 
 **Usar** (as ferramentas do host apontam para o laboratório com `--dir compose/net --port 4700`):
 ```
@@ -40,7 +40,7 @@ mix brdc.blocks 2 --dir compose/net --port 4701      # o mesmo bloco em todos
 - desligar de verdade: `stop v4` (as conexões fecham e os pares veem a queda).
 
 ## Recursos (para não travar a máquina)
-Por container: `cpus` 0,5, memória 192 MB (validador) ou 256 MB (carteira), `memswap_limit` igual (sem swap), `pids_limit` 256, `init: true`, `cap_drop: [ALL]`, `no-new-privileges`, raiz somente leitura com `tmpfs: /tmp`. `ERL_AFLAGS="+S 2:2 +A 8 +sbwt none"` impede o BEAM de abrir um escalonador por núcleo do computador dentro de 0,5 CPU; `RELEASE_DISTRIBUTION=none` dispensa a distribuição do Erlang. **Orçamento padrão (4 + 2): até 3 CPUs e 1,3 GB.** Portas só em `127.0.0.1` e diferentes das da rede local (`4545` e `4000`): os dois ambientes rodam juntos. Cada validador tem um volume próprio (os blocos sobrevivem a `stop` e `kill`).
+Por container: `cpus` 0,5, memória **384 MiB** (validador) ou 256 MB (carteira), `memswap_limit` igual (sem swap), `pids_limit` 256, `init: true`, `cap_drop: [ALL]`, `no-new-privileges`, raiz somente leitura com `tmpfs: /tmp`. `ERL_AFLAGS="+S 2:2 +A 8 +sbwt none"` impede o BEAM de abrir um escalonador por núcleo do computador dentro de 0,5 CPU; `RELEASE_DISTRIBUTION=none` dispensa a distribuição do Erlang. **Orçamento padrão (4 + 2): até 3 CPUs e 2,0 GB.** Portas só em `127.0.0.1` e diferentes das da rede local (`4545` e `4000`): os dois ambientes rodam juntos. Cada validador tem um volume próprio (os blocos sobrevivem a `stop` e `kill`).
 
 ## O que é verificado e por quem
 - **Os próprios validadores** (BFT, certificado de mais de 2/3, TLS mútuo com a chave de consenso): o laboratório não muda nada disso, só os coloca em containers.
@@ -49,7 +49,7 @@ Por container: `cpus` 0,5, memória 192 MB (validador) ou 256 MB (carteira), `me
 
 ## O que pode dar errado
 - **Primeira build lenta e com rede:** baixa a imagem do Elixir, dependências e os binários do Tailwind e do esbuild; duas dependências da web vêm do GitHub.
-- **Memória:** cada nó usa cerca de **120 a 135 MB** dos 192 MB (pico medido sob 30 transações); reduzir muito o limite faz o Docker matar o container (OOM).
+- **Memória:** o pico medido por validador foi ~135 MiB a 50 tx/s, ~190 a 200, ~215 a 400 e ~290 a 800. Com **192 MiB os validadores morreram por falta de memória (OOM, código 137)** entre 100 e 200 tx/s, todos juntos, porque todos guardam o mesmo mempool; por isso o padrão é 384 MiB. Reduzir o limite faz o Docker matar o container.
 - **`pause` engana a contagem de pares** (conexões continuam abertas); para ver a queda, use `stop` ou `kill`.
 - **Portas ocupadas:** se `4700+` ou `4100+` estiverem em uso, escolha outras com `--base-port` e `--wallet-port`.
 - **Semente montada:** a imagem roda sem root e lê a semente (0600) montada do computador; funcionou no OrbStack. Em outros ambientes pode haver diferença de dono; se acontecer, o validador não sobe e o log diz "semente com permissão aberta" ou falta de acesso.

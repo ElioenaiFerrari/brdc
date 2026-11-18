@@ -41,14 +41,18 @@ defmodule BrdcDev.Compose do
   @spec client_port(opts() | map(), pos_integer()) :: pos_integer()
   def client_port(%{base_port: base}, i), do: base + i - 1
 
-  @doc "Padrões das opções (4 validadores e 2 carteiras; 3 CPUs e 1,3 GB no máximo)."
+  @doc """
+  Padrões das opções (4 validadores e 2 carteiras; 3 CPUs e **2,0 GB** no máximo). Os 384 MiB do validador vêm do
+  teste de carga: o pico de memória foi ~135 MiB a 50 tx/s, ~190 a 200, ~215 a 400 e ~290 a 800; com 192 MiB os
+  validadores morriam por falta de memória (OOM, código 137) entre 100 e 200 tx/s.
+  """
   @spec defaults() :: opts()
   def defaults do
     %{
       validators: 4,
       wallets: 2,
       cpus: "0.5",
-      memory: "192m",
+      memory: "384m",
       wallet_memory: "256m",
       base_port: 4700,
       wallet_port: 4100,
