@@ -6,11 +6,13 @@ defmodule BrdcNode.Handler do
   - `:status` → `[chain_id, altura, horário, oferta, hash do último bloco, pendentes, taxa-base, taxa por byte]`
   - `:get_account` (corpo: 32 bytes do endereço) → `[saldo, nonce, saldo com pendentes, nonce com pendentes]`
   - `:submit_tx` (corpo: transação assinada) → id de 32 bytes, ou o motivo da recusa
-  - `:query` (`<<1, endereço>>` contratos · `<<2, endereço>>` credenciais do titular · `<<3, chave pública>>` tipos cujo órgão inclui a chave · `<<4, endereço>>` bens · `<<5, chave pública>>` classes do órgão · `<<6, chave pública>>` bens das classes do órgão · `<<7, chave pública>>` credenciais dos órgãos · `<<8>>` oferta e reserva)
+  - `:query` (`<<1, endereço>>` contratos · `<<2, endereço>>` credenciais do titular · `<<3, chave pública>>` tipos cujo órgão inclui a chave · `<<4, endereço>>` bens · `<<5, chave pública>>` classes do órgão · `<<6, chave pública>>` bens das classes do órgão · `<<7, chave pública>>` credenciais dos órgãos · `<<8>>` oferta e reserva · explorador: `<<9, antes::u64, quantos::u16>>` resumos de blocos · `<<10, altura::u64>>` bloco e certificado · `<<11, id>>` transação · `<<12, endereço, limite::u16>>` histórico da conta · `<<13, limite::u16>>` pendentes · `<<14>>` validadores)
   - `:proposal` (`<<1, tipo, campos>>` propõe (emissão, registro, veto, gravame) · `<<2, id, aprovação>>` aprova · `<<3, chave pública>>` lista as dos seus órgãos)
   - `:get_block` → ainda não suportado (o bloco não tem codificação de rede)
   """
+  alias BrdcConsensus.Certificate
   alias BrdcCrypto.Encoding
+  alias BrdcLedger.{Block, Tx}
   alias BrdcNode.{Node, Proposals}
 
   @status [:string, :u64, :u64, :u64, :bytes, :u32, :u64, :u64, :u64, :u64, :u64, :u64]
@@ -46,6 +48,10 @@ defmodule BrdcNode.Handler do
   ]
   @class [:string, :u32, :u32, :u64]
   @max_listed 100
+  # explorador: resumo de bloco · transação achada · linha do histórico de uma conta
+  @block_row [:u64, :u64, {:fixed, 32}, {:fixed, 32}, :u32, :u32]
+  @tx_row [:u64, :u32, :u64, {:fixed, 32}, :bytes]
+  @history_row [{:fixed, 32}, :u64, :u64, :u8, :u8]
   @max_contracts 100
   @account [:u64, :u64, :u64, :u64]
 
@@ -137,6 +143,58 @@ defmodule BrdcNode.Handler do
 
     {:ok,
      Encoding.encode([:u64, :u64, :u64, :u64, :string], [i.minted, i.burned, seq, reserve, ref])}
+  end
+
+  # --- explorador (somente leitura; cada resposta é conferível pelo cliente) ---
+  def handle(node, :query, <<9, before::64, count::16>>) when count in 1..100 do
+    rows =
+      for b <- Node.explorer_blocks(node, before, count) do
+        Encoding.encode(@block_row, [b.height, b.time, b.hash, b.proposer, b.tx_count, b.signers])
+      end
+
+    {:ok, Encoding.encode([{:list, :bytes}], [rows])}
+  end
+
+  def handle(node, :query, <<10, height::64>>) do
+    case Node.explorer_block(node, height) do
+      {:ok, block, cert} ->
+        cert_bin = if cert, do: Certificate.encode(cert), else: ""
+        {:ok, Encoding.encode([:bytes, :bytes], [Block.encode(block), cert_bin])}
+
+      :error ->
+        {:error, :not_found}
+    end
+  end
+
+  def handle(node, :query, <<11, id::binary-size(32)>>) do
+    case Node.explorer_tx(node, id) do
+      {:ok, r} ->
+        {:ok,
+         Encoding.encode(@tx_row, [r.height, r.index, r.time, r.block_hash, Tx.encode(r.tx)])}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  def handle(node, :query, <<12, addr::binary-size(32), limit::16>>) when limit in 1..200 do
+    rows =
+      for e <- Node.explorer_account(node, addr, limit) do
+        role = if e.role == :sender, do: 0, else: 1
+        Encoding.encode(@history_row, [e.id, e.height, e.time || 0, e.kind || 0, role])
+      end
+
+    {:ok, Encoding.encode([{:list, :bytes}], [rows])}
+  end
+
+  def handle(node, :query, <<13, limit::16>>) when limit in 1..200 do
+    rows = for m <- Node.explorer_mempool(node, limit), do: Tx.encode(m.tx)
+    {:ok, Encoding.encode([{:list, :bytes}], [rows])}
+  end
+
+  def handle(node, :query, <<14>>) do
+    {:ok,
+     Encoding.encode([{:list, :bytes}], [Enum.map(Node.explorer_validators(node), & &1.pub)])}
   end
 
   def handle(node, :query, <<7, pub::binary-size(32)>>),

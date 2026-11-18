@@ -145,6 +145,16 @@ Invariante → teste que o cobre. Linhas *planejadas* ainda não têm teste: ent
 | Oferta, aceite, cancelamento e finalização no JS têm cargas **iguais** às do Elixir | `assets/js/crypto/assets.test.mjs` + `vectors/tx.json` |
 | Ciclo pela rede: classe, registro, oferta, escrow, finalização depois da janela (relógio) | `apps/brdc_dev/test/brdc_dev/devnet_e2e_test.exs` |
 
+## Explorador (M4, pronto)
+| Invariante | Teste |
+|---|---|
+| O cliente **confere** o certificado do bloco (mesmo hash e altura, mais de 2/3 de precommits válidos); chaves falsas e quórum fraco **não** conferem; sem certificado é "não conferido" | `apps/brdc_node/test/brdc_node/explorer_test.exs`, `apps/brdc_web/test/brdc_web_web/live/explorer_live_test.exs` |
+| Transação devolvida tem de ter o id pedido; histórico mostra remetente e destinatário; pendentes somem ao virar bloco; o índice é refeito do disco | `explorer_test.exs`, `explorer_live_test.exs` |
+| Consultas com limite (100 blocos, 200 itens); id e altura malformados dão aviso, não erro | `explorer_live_test.exs` |
+| Somente leitura: sem cofre nem gancho de assinatura; CSP estrita | `explorer_live_test.exs` |
+| Nomes dos 21 tipos, dinheiro sem perder precisão (`0,001172`), encurtadores | `explorer_view_test.exs` |
+| **Verificado à mão no Chrome** (4 validadores em processos reais): bloco 3 conferido com 3 assinaturas, busca por id, bloco novo aparece sozinho; terminal: lista, bloco, transação, histórico, pendentes, erros | (manual, fluxo 20) |
+
 ## Interface: máscara de dinheiro, efeito de letras e importação (pronto)
 | Invariante | Teste |
 |---|---|

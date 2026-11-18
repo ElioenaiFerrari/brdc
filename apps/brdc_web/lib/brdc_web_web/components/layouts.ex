@@ -40,6 +40,10 @@ defmodule BrdcWebWeb.Layouts do
         <img src={~p"/images/mark.svg"} width="32" height="32" alt="" />
         <span class="text-lg font-extrabold tracking-[0.18em]">BRDC</span>
       </a>
+      <nav aria-label="Principal" class="flex gap-4 text-sm text-[var(--brdc-muted)]">
+        <a href="/" class="hover:text-[var(--brdc-text)]">Carteira</a>
+        <a href="/explorer" class="hover:text-[var(--brdc-text)]">Explorador</a>
+      </nav>
     </header>
 
     <main class="mx-auto w-full max-w-md px-5 pb-28 pt-5 lg:max-w-5xl">

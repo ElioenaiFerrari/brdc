@@ -20,7 +20,7 @@ defmodule BrdcNode.Node do
   alias BrdcCrypto.{Address, Ed25519, Encoding}
   alias BrdcLedger.{Block, Executor, State, Tx}
   alias BrdcNode.BlockStore.File, as: LogFile
-  alias BrdcNode.{Genesis, Proposals}
+  alias BrdcNode.{Genesis, Index, Proposals}
   require Logger
 
   @max_mempool 10_000
@@ -85,6 +85,39 @@ defmodule BrdcNode.Node do
   """
   @spec supply_info(GenServer.server()) :: map()
   def supply_info(node), do: GenServer.call(node, :supply_info)
+
+  # --- explorador (somente leitura) -----------------------------------------------------------------------------
+
+  @doc """
+  Resumos de blocos, do mais novo ao mais antigo: até `count` blocos com altura **menor que** `before` (`0` = a
+  partir do mais novo). Só os últimos 1.000 blocos ficam na memória.
+  """
+  @spec explorer_blocks(GenServer.server(), non_neg_integer(), pos_integer()) :: [map()]
+  def explorer_blocks(node, before, count),
+    do: GenServer.call(node, {:explorer_blocks, before, count})
+
+  @doc "Um bloco e o seu certificado (`nil` se o bloco não tem)."
+  @spec explorer_block(GenServer.server(), pos_integer()) ::
+          {:ok, Block.t(), Certificate.t() | nil} | :error
+  def explorer_block(node, height), do: GenServer.call(node, {:explorer_block, height})
+
+  @doc "Uma transação pelo id: a transação, o bloco e a posição."
+  @spec explorer_tx(GenServer.server(), <<_::256>>) ::
+          {:ok, map()} | {:error, :not_found | :pruned}
+  def explorer_tx(node, id), do: GenServer.call(node, {:explorer_tx, id})
+
+  @doc "Histórico de uma conta (do mais novo ao mais antigo)."
+  @spec explorer_account(GenServer.server(), <<_::256>>, pos_integer()) :: [map()]
+  def explorer_account(node, addr, limit),
+    do: GenServer.call(node, {:explorer_account, addr, limit})
+
+  @doc "Transações pendentes (mempool), na ordem de chegada."
+  @spec explorer_mempool(GenServer.server(), pos_integer()) :: [map()]
+  def explorer_mempool(node, limit), do: GenServer.call(node, {:explorer_mempool, limit})
+
+  @doc "Validadores em vigor, com a chave pública e o endereço de cada um."
+  @spec explorer_validators(GenServer.server()) :: [map()]
+  def explorer_validators(node), do: GenServer.call(node, :explorer_validators)
 
   @doc "Classes de bens cujo órgão inclui a chave pública."
   @spec classes_for(GenServer.server(), <<_::256>>) :: [map()]
@@ -171,6 +204,7 @@ defmodule BrdcNode.Node do
       timer: nil,
       subscribers: %{},
       certs: %{},
+      index: Index.new(),
       tx_hook: nil,
       store: nil,
       data_dir: nil
@@ -249,6 +283,70 @@ defmodule BrdcNode.Node do
       {:ok, store, id} -> {:reply, {:ok, id}, save_proposals(%{s | proposals: store})}
       {:error, _} = err -> {:reply, err, s}
     end
+  end
+
+  def handle_call({:explorer_blocks, before, count}, _from, s) do
+    top = if before == 0, do: s.state.height, else: min(before - 1, s.state.height)
+
+    list =
+      for h <- top..max(top - count + 1, 1)//-1, {:ok, b} <- [Map.fetch(s.blocks, h)] do
+        cert = Map.get(s.certs, h)
+
+        %{
+          height: h,
+          time: b.time,
+          hash: Block.hash(b),
+          proposer: b.proposer,
+          tx_count: length(b.txs),
+          signers: if(cert, do: length(cert.votes), else: 0)
+        }
+      end
+
+    {:reply, list, s}
+  end
+
+  def handle_call({:explorer_block, h}, _from, s) do
+    case Map.fetch(s.blocks, h) do
+      {:ok, b} -> {:reply, {:ok, b, Map.get(s.certs, h)}, s}
+      :error -> {:reply, :error, s}
+    end
+  end
+
+  def handle_call({:explorer_tx, id}, _from, s) do
+    reply =
+      with {:ok, {h, i}} <- Index.lookup(s.index, id) |> or_not_found(),
+           {:ok, b} <- Map.fetch(s.blocks, h) |> or_pruned() do
+        {:ok,
+         %{tx: Enum.at(b.txs, i), height: h, index: i, time: b.time, block_hash: Block.hash(b)}}
+      end
+
+    {:reply, reply, s}
+  end
+
+  def handle_call({:explorer_account, addr, limit}, _from, s) do
+    list =
+      for e <- Index.account(s.index, addr, limit) do
+        block = Map.get(s.blocks, e.height)
+        tx = block && Enum.at(block.txs, e.index)
+
+        %{
+          id: e.id,
+          height: e.height,
+          role: e.role,
+          kind: tx && tx.kind,
+          time: block && block.time
+        }
+      end
+
+    {:reply, list, s}
+  end
+
+  def handle_call({:explorer_mempool, limit}, _from, s) do
+    {:reply, s.mempool |> Enum.take(limit) |> Enum.map(&%{id: Tx.id(&1), tx: &1}), s}
+  end
+
+  def handle_call(:explorer_validators, _from, s) do
+    {:reply, Enum.map(s.genesis.validators, &%{pub: &1, address: Address.hash(&1)}), s}
   end
 
   def handle_call(:supply_info, _from, s) do
@@ -393,6 +491,11 @@ defmodule BrdcNode.Node do
     }
   end
 
+  defp or_not_found({:ok, _} = ok), do: ok
+  defp or_not_found(:error), do: {:error, :not_found}
+  defp or_pruned({:ok, _} = ok), do: ok
+  defp or_pruned(:error), do: {:error, :pruned}
+
   defp buying?(nil, _addr), do: false
   defp buying?(deal, addr), do: deal.buyer == addr
 
@@ -431,7 +534,13 @@ defmodule BrdcNode.Node do
       :ok ->
         {kept, pending} = prune_mempool(new_state, rest)
         s = %{s | state: new_state, mempool: kept, blocks: keep(s.blocks, block)}
-        s = %{s | certs: keep_cert(s.certs, block.height, cert)}
+
+        s = %{
+          s
+          | certs: keep_cert(s.certs, block.height, cert),
+            index: Index.add_block(s.index, block)
+        }
+
         s = %{s | proposals: Proposals.prune(s.proposals, new_state)}
         persist_proposals(s)
         s = %{s | pending_state: pending}
@@ -556,14 +665,14 @@ defmodule BrdcNode.Node do
     with :ok <- File.mkdir_p(dir),
          :ok <- check_genesis(dir, s.genesis),
          {:ok, store, records, recovery} <- LogFile.open(Path.join(dir, "blocks.log")),
-         {:ok, state, blocks, certs} <- replay_blocks(s, state, records) do
+         {:ok, state, blocks, certs, index} <- replay_blocks(s, state, records) do
       if recovery.truncated_bytes > 0,
         do:
           Logger.warning(
             "log de blocos: cauda rasgada descartada (#{recovery.truncated_bytes} bytes)"
           )
 
-      s = %{s | store: store, data_dir: dir, blocks: blocks, certs: certs}
+      s = %{s | store: store, data_dir: dir, blocks: blocks, certs: certs, index: index}
       {:ok, %{s | proposals: load_proposals(dir, state)}, state}
     end
   end
@@ -584,11 +693,15 @@ defmodule BrdcNode.Node do
   defp replay_blocks(s, state, records) do
     pubs = s.genesis.validators
 
-    Enum.reduce_while(records, {:ok, state, %{}, %{}}, fn rec, {:ok, st, blocks, certs} ->
+    Enum.reduce_while(records, {:ok, state, %{}, %{}, Index.new()}, fn rec,
+                                                                       {:ok, st, blocks, certs,
+                                                                        index} ->
       with {:ok, block, cert} <- parse_record(rec),
            :ok <- verify_disk_cert(cert, block, st.params.chain_id, pubs),
            {:ok, st2} <- Block.apply(st, block) do
-        {:cont, {:ok, st2, keep(blocks, block), keep_cert(certs, block.height, cert)}}
+        {:cont,
+         {:ok, st2, keep(blocks, block), keep_cert(certs, block.height, cert),
+          Index.add_block(index, block)}}
       else
         {:error, reason} -> {:halt, {:error, {:bad_block_on_disk, st.height + 1, reason}}}
       end

@@ -35,6 +35,12 @@ defmodule BrdcWebWeb.Router do
     pipe_through :browser
 
     live "/", WalletLive
+
+    # explorador público, só leitura
+    live "/explorer", ExplorerLive, :home
+    live "/explorer/block/:height", ExplorerLive, :block
+    live "/explorer/tx/:id", ExplorerLive, :tx
+    live "/explorer/account/:address", ExplorerLive, :account
     get "/design", PageController, :home
   end
 

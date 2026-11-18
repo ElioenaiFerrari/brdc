@@ -31,7 +31,7 @@ O ledger, o consenso (motor sem I/O, testado por simulação) e o P2P (TLS 1.3 m
 ### M3 · Memória de voto do consenso (WAL) — **pronta** ([ADR-0026](adr/0026-consensus-safety-journal.md))
 Rodada e bloqueio **gravados antes de cada voto**, para um validador que reinicia **nunca votar duas vezes** na mesma altura e rodada. **Teste:** matar e subir o nó no meio de uma rodada sem equivocar.
 
-### M4 · Explorador
+### M4 · Explorador — **pronto** ([fluxo 20](flows/20-explorer.md))
 Página `/explorer` (LiveView, só leitura) falando com o nó pela porta pública: blocos, transações, contas, contratos, bens, credenciais, validadores, **quem assinou cada bloco** (pelo certificado) e busca. Consultas novas na porta pública (intervalo de blocos, transação por id) com limites. **Teste:** o que o explorador mostra bate com o estado do nó; consulta fora de limite é recusada.
 
 ### M5 · Ferramentas — **em andamento** (tudo por `mix`, sem `Makefile`; rede de teste `devnet.init|up|down|status|logs|kill|reset` e `brdc.node` prontos, ver [NETWORKS](NETWORKS.md))
