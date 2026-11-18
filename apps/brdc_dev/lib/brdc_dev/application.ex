@@ -1,16 +1,25 @@
 defmodule BrdcDev.Application do
   @moduledoc false
   use Application
-  alias BrdcDev.Devnet
+  alias BrdcDev.{Devnet, Net}
   alias BrdcNode.{Handler, Node}
   alias BrdcP2p.{Guard, PublicPort}
 
   @impl true
   def start(_type, _args) do
-    children =
-      if Application.get_env(:brdc_dev, :devnet, false), do: devnet_children(), else: []
+    children = if embed_node?(), do: devnet_children(), else: []
 
     Supervisor.start_link(children, strategy: :one_for_one, name: BrdcDev.Supervisor)
+  end
+
+  # O nó solo embutido só faz sentido numa rede de UM validador que o `phx.server` mesmo criou. Se existe uma rede
+  # gerenciada (`mix brdc.devnet.init|up`, com `net/devnet.json`) ou a gênese tem mais de um validador, a carteira
+  # conversa com os validadores que já estão rodando (porta pública 4545) e nada é embutido.
+  defp embed_node? do
+    dir = Application.get_env(:brdc_dev, :dir) || Devnet.default_dir()
+
+    Application.get_env(:brdc_dev, :devnet, false) and Net.read_config(dir) == nil and
+      Devnet.existing_validators(dir) in [nil, 1]
   end
 
   defp devnet_children do

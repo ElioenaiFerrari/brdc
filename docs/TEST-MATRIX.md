@@ -6,7 +6,7 @@ Invariante → teste que o cobre. Linhas *planejadas* ainda não têm teste: ent
 | Invariante | Teste |
 |---|---|
 | Cada app existe e está documentado | `apps/*/test/*_test.exs` (`o app existe e está documentado`) |
-| A documentação não tem link quebrado, imagem sem alternativa, app fora do README, fluxo fora do molde nem ADR sem status | `make docs-check` |
+| A documentação não tem link quebrado, imagem sem alternativa, app fora do README, fluxo fora do molde nem ADR sem status | `mix brdc.docs.check` |
 
 ## Fase 1 (pronta)
 | Invariante | Teste |
@@ -17,7 +17,7 @@ Invariante → teste que o cobre. Linhas *planejadas* ainda não têm teste: ent
 | Ed25519: vetor RFC 8032; assinatura só vale para a chave e a mensagem; `verify` nunca levanta exceção com lixo | `vectors_test.exs`, `properties_test.exs` |
 | Outra passphrase, conta ou índice dá outro endereço; a mesma dá o mesmo; `inspect` não mostra a semente | `properties_test.exs` (`conta e passphrase`) |
 | Codificação determinística: ida e volta; bytes sobrando ou faltando e lixo são recusados sem exceção | `properties_test.exs` |
-| **Elixir e JS concordam** (semente, chave pública, endereço, SLIP-10, hash etiquetado) | `shared_vectors_test.exs` (Elixir) e `make js-vectors` (Node), ambos sobre `vectors/crypto.json` |
+| **Elixir e JS concordam** (semente, chave pública, endereço, SLIP-10, hash etiquetado) | `shared_vectors_test.exs` (Elixir) e `mix brdc.js.test` (Node), ambos sobre `vectors/crypto.json` |
 
 ## Fase 2 (pronta, exceto persistência)
 | Invariante | Teste |
@@ -144,6 +144,43 @@ Invariante → teste que o cobre. Linhas *planejadas* ainda não têm teste: ent
 |---|---|
 | Oferta, aceite, cancelamento e finalização no JS têm cargas **iguais** às do Elixir | `assets/js/crypto/assets.test.mjs` + `vectors/tx.json` |
 | Ciclo pela rede: classe, registro, oferta, escrow, finalização depois da janela (relógio) | `apps/brdc_dev/test/brdc_dev/devnet_e2e_test.exs` |
+
+## Interface: máscara de dinheiro, efeito de letras e importação (pronto)
+| Invariante | Teste |
+|---|---|
+| Máscara: milhares, vírgula decimal, 6 casas, zeros à esquerda, **ponto digitado vira decimal**, apagar nunca lê o ponto de milhar como decimal, colagens (R$, inglês, milhar), cursor, idempotência, e **propriedade: qualquer entrada vira texto válido para o parser (ou vazio)** | `apps/brdc_web/assets/js/crypto/scramble.test.mjs` (13 testes) |
+| Efeito: tamanho e posição de pontuação preservados, classes de caractere, progresso fora de 0..1, emoji, carregamento, duração | `scramble.test.mjs` |
+| **Verificado à mão no Chrome:** revelação resolve da esquerda e termina no texto exato sem sobra (achou e corrigiu o defeito de a segunda notificação ler os glifos como texto); carregamento cintila e mantém o texto real para leitor de tela; máscara com digitação real (`1234567` vira `1.234.567`, `.5` vira `,5`, `1250.5` vira `1.250,5`, decimais param em 6); rótulo "Assinando e enviando…" durante a assinatura; **importar com passphrase errada mostra o endereço e a volta preserva os campos** | (manual, anotado nos fluxos 13 e 14) |
+
+## Produção da moeda simulada (M5, pronta)
+| Invariante | Teste |
+|---|---|
+| Carteiras de teste: ida e volta, endereços distintos, nome sem caminho nem maiúsculas, arquivo corrompido, resolução de nome ou endereço | `apps/brdc_dev/test/brdc_dev/wallets_test.exs` |
+| **Cenário completo:** atestado, mint 2 de 2, mint com 1 só emissor recusado, transferência, resgate (burn), redução da reserva; oferta = emitido − queimado, reserva e cobertura batem; roda duas vezes seguidas | `apps/brdc_dev/test/brdc_dev/simulation_test.exs` |
+| Mint só com um emissor é recusado; referência repetida não vale duas vezes; só o dono queima e não mais do que tem; atestado com sequência automática e cobertura coberta, exata e abaixo | `simulation_test.exs` |
+| **Verificado à mão** com 4 validadores em processos reais: `mix brdc.simulate issuance` (duas rodadas) e os comandos avulsos | (manual, anotado no [fluxo 19](flows/19-coin-issuance-simulation.md)) |
+
+## Ferramentas `mix brdc.*` (M5, em andamento)
+| Invariante | Teste |
+|---|---|
+| A documentação não tem link quebrado, imagem sem alternativa, app fora do README, fluxo fora do molde nem ADR sem status (conferência em Elixir, sem shell) | `apps/brdc_dev/test/brdc_dev/docs_check_test.exs` (inclui este repositório) |
+| Configuração da rede, caminhos, pid (só número vai ao `kill`), duração, portas, espera, `--help` que não age | `apps/brdc_dev/test/brdc_dev/net_test.exs` |
+| Gênese de N validadores: chaves v1..vN, ordem estável, número fixo depois de criada | `net_test.exs` |
+| **Verificado à mão com 4 processos reais:** mint por um validador chega aos 4 com o mesmo bloco; `kill -9` em um e os outros 3 seguem; `up` religa e ele se atualiza; `down` e `up` continuam do disco | (manual, anotado em `docs/NETWORKS.md`) |
+
+## Rede de vários validadores (M2, pronta)
+| Invariante | Teste |
+|---|---|
+| Bloco com certificado: todos conferem e confirmam o mesmo bloco; certificado ruim (sem quórum, voto repetido, estranho, hash trocado, assinatura falsa) é recusado e o estado não muda; idempotência; altura pulada | `apps/brdc_node/test/brdc_node/multi_commit_test.exs` |
+| O certificado vai ao disco com o bloco e volta ao reiniciar (serve à sincronização) | `multi_commit_test.exs` |
+| Mensagens entre validadores: ida e volta; lixo, sobra, tipo desconhecido e limites recusados | `wire_test.exs` |
+| Conexão por par (quem tem a chave menor disca), ordem preservada, reconexão sozinha, estranho recusado, malformada derruba a sessão | `peers_test.exs` |
+| **4 validadores em TLS real:** uma transação a um nó vira bloco em todos, com certificado de mais de 2/3; sem transação a rede fica parada | `cluster_test.exs` |
+| Transações em nós diferentes ao mesmo tempo e em rajada: estado final idêntico, sem equivocação | `cluster_test.exs` |
+| Proponente fora do ar: outro assume; ao voltar, sincroniza | `cluster_test.exs` |
+| Sem quórum a rede **para** e retoma ao voltar um (com reenvio a quem reconecta) | `cluster_test.exs`, `restore_test.exs` |
+| Entrada tardia: sincroniza conferindo o certificado de cada bloco | `cluster_test.exs` |
+| Reinício no meio (mesmo disco e diário) e a carteira por qualquer nó | `cluster_test.exs` |
 
 ## Diário de segurança do consenso (M3, pronto)
 | Invariante | Teste |

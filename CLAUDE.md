@@ -40,7 +40,7 @@ Lastro em reais com emissores autorizados (M-de-N) · consenso BFT com validador
 
 ## Regras de engenharia
 
-- Elixir estável (1.20 / OTP 29 hoje). `mix format --check-formatted`, `mix credo --strict`, `mix dialyzer` e `mix test` limpos (`mix check` roda os três primeiros).
+- Elixir estável (1.20 / OTP 29 hoje). `mix format --check-formatted`, `mix credo --strict`, `mix dialyzer` e `mix test` limpos (`mix brdc.check` roda tudo isso e mais os testes JS e a conferência dos docs).
 - Testes com **ExUnit** e **StreamData** (propriedades) para: invariantes da moeda (oferta total = emitido − queimado), determinismo do ledger, vetores oficiais de BIP-39/SLIP-10, segurança do consenso em simulações (nunca dois blocos finais na mesma altura).
 - Funções públicas com `@spec` e `@doc`; módulos com `@moduledoc` que explicam o **porquê**.
 - Sem segredos em log, em `inspect` nem em erro (módulos de chave implementam `Inspect` redigido). A BEAM **não zera memória**: documentado como limite, e o que importa é que chaves de usuário não existam no servidor.
@@ -51,8 +51,8 @@ Lastro em reais com emissores autorizados (M-de-N) · consenso BFT com validador
 - Toda mudança de **comportamento, comando, app, protocolo ou fluxo** atualiza, **no mesmo trabalho**, o `README.md` (estado atual, mapa de apps, início rápido) e o fluxo correspondente em `docs/flows/` (texto **e** diagrama). Quando couber, também `TEST-MATRIX`, `THREAT-MODEL`, `GLOSSARY`, o guia de conceitos e ADR.
 - Todo conceito novo ganha explicação em `docs/concepts/` (com exemplos em Elixir) e termos novos entram no `GLOSSARY`. Ao fim de cada fase: seção "como ler o código desta fase".
 - Tudo em **pt-BR** (código e identificadores em inglês). Fluxos seguem o molde: resumo; quem participa; diagramas; passo a passo; o que é verificado e por quem; o que pode dar errado; onde está no código; testes que cobrem; limites honestos. Funcionalidade só planejada leva o aviso "planejado".
-- **Diagramas sempre pela skill `diagram-design`**, no tema em `docs/diagrams/THEME.md`: edite o gerador em `scripts/diagrams/` e rode `make diagrams` (gera só o PNG; precisa do Brave). **Nunca desenhar em ASCII.** Não edite os arquivos gerados à mão. Embuta o PNG no markdown com texto alternativo em pt-BR.
-- `make docs-check` (links, imagens, texto alternativo, apps no README, molde dos fluxos, status dos ADRs) faz parte do portão de qualidade.
+- **Diagramas sempre pela skill `diagram-design`**, no tema em `docs/diagrams/THEME.md`: edite o gerador em `scripts/diagrams/` e rode `mix brdc.diagrams` (gera só o PNG; precisa do Brave). **Nunca desenhar em ASCII.** Não edite os arquivos gerados à mão. Embuta o PNG no markdown com texto alternativo em pt-BR.
+- `mix brdc.docs.check` (links, imagens, texto alternativo, apps no README, molde dos fluxos, status dos ADRs) faz parte do portão de qualidade.
 
 ## Fluxo de trabalho
 
@@ -65,17 +65,26 @@ Lastro em reais com emissores autorizados (M-de-N) · consenso BFT com validador
 ## Comandos
 
 ```
-make setup        # mix deps.get
-make check        # formato + credo + testes (portão de qualidade)
-make test         # testes de todos os apps
-make lint         # credo --strict
-make dialyzer     # tipos (a 1ª vez monta o PLT)
-make docs-check   # links, imagens, apps no README, molde dos fluxos, status dos ADRs
-make run          # carteira (4000) + nó local de teste (4545); os blocos ficam em net/data e sobrevivem a reinício
-make reset-devnet  # apaga net/data (com o nó parado): volta à gênese
-make diagrams     # regenera docs/diagrams/*.png (precisa do Brave)
-make              # lista os atalhos
+mix brdc                # lista todos os comandos (é a fonte da verdade)
+mix deps.get            # baixa as dependências
+mix brdc.check          # formato + credo + compilação sem avisos + testes + JS + docs (portão de qualidade)
+mix test                # testes de todos os apps
+mix credo --strict      # análise estática
+mix dialyzer            # tipos (a 1ª vez monta o PLT)
+mix brdc.docs.check     # links, imagens, apps no README, molde dos fluxos, status dos ADRs
+mix brdc.js.test        # criptografia do navegador (Node) contra os vetores do Elixir
+mix brdc.diagrams       # regenera docs/diagrams/*.png (precisa do Brave)
+mix brdc.devnet.up      # sobe a rede de teste: N validadores (padrão 4), um processo cada, blocos em net/validators/vK/data
+mix brdc.devnet.status  # quem está no ar, altura, pendentes, quórum e acordo
+mix brdc.devnet.kill N  # kill -9 no validador N (simula queda); `up` o religa e ele se atualiza
+mix brdc.devnet.down    # para todos (os blocos ficam em disco)
+mix brdc.devnet.reset   # apaga blocos, diários, pids e logs (--all: e a gênese); com a rede parada
+mix brdc.simulate issuance  # produção da moeda de ponta a ponta (atesta reserva, emite, paga, resgata, confere regras)
+mix brdc.reserve|mint|burn|supply  # os passos avulsos; mix brdc.wallet.new|list e mix brdc.send para pessoas de teste
+mix phx.server          # carteira (4000); acha o validador 1 em 4545; sem rede gerenciada, embute um nó solo
 ```
+
+**Regra:** comandos do projeto são **mix tasks** (`mix brdc.*`), como no `brdid`; **não** há `Makefile`.
 
 ## Documentos
 

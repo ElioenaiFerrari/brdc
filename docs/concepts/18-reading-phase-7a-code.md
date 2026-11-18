@@ -22,7 +22,7 @@ Fluxo: [Fluxo 14](../flows/14-local-node-and-send.md). Decisão: [ADR-0023](../a
 Fluxo [15](../flows/15-contracts-in-wallet.md): `crypto/contracts.mjs` (montar, avaliar efeitos), `contracts_hook.js` (a tela) e `contracts_ui.js` (textos em português). Os modelos vêm do Elixir em `generated/contract_templates.json`.
 
 ## Rode você mesmo
-`make run`, abra `http://localhost:4000`, crie uma carteira, copie o endereço e rode `make fund ADDR=brdc1… AMOUNT=100`. Depois envie para outro endereço pela tela.
+`mix phx.server`, abra `http://localhost:4000`, crie uma carteira, copie o endereço e rode `mix brdc.fund brdc1… 100`. Depois envie para outro endereço pela tela.
 
 ## Limites honestos
 Veja o [Fluxo 14](../flows/14-local-node-and-send.md): um validador só, só transferências, sem histórico.

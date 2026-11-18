@@ -33,7 +33,7 @@ A frase e a passphrase são digitadas no navegador, viram uma chave de assinatur
 - Sem zeroização garantida de memória em JavaScript.
 
 ## Onde está no código
-`apps/brdc_web/assets/js/crypto/*.mjs`; testes em `crypto.test.mjs` (`make js-test`); vetores do Elixir gerados por `tools/gen_wallet_vectors.exs`; lado do nó em `apps/brdc_crypto/test/brdc_crypto/hash_vectors_test.exs` e `apps/brdc_ledger/test/brdc_ledger/wallet_vectors_test.exs`.
+`apps/brdc_web/assets/js/crypto/*.mjs`; testes em `crypto.test.mjs` (`mix brdc.js.test`); vetores do Elixir gerados por `tools/gen_wallet_vectors.exs`; lado do nó em `apps/brdc_crypto/test/brdc_crypto/hash_vectors_test.exs` e `apps/brdc_ledger/test/brdc_ledger/wallet_vectors_test.exs`.
 
 ## Testes que cobrem
 18 testes JS (NIST, concordância com o Elixir, bech32m, BIP-39, SLIP-10, contas e passphrase, chave não extraível, endereço, transações byte a byte, limites de inteiros) e 5 testes Elixir sobre os mesmos vetores.

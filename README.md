@@ -30,13 +30,13 @@ Uma **stablecoin brasileira** (1 BRDC = 1 BRL) numa blockchain própria em **Eli
 ## Início rápido
 
 ```
-make setup        # baixa as dependências
-make check        # formato, credo e testes
-make docs-check   # confere a documentação
-make              # lista tudo
+mix deps.get          # baixa as dependências
+mix brdc.check        # formato, credo, compilação sem avisos, testes, JS e docs
+mix brdc.docs.check   # confere a documentação
+mix brdc              # lista todos os comandos
 ```
 
-Para ver a carteira funcionando (nó local de teste incluído): `make run` e abra `http://localhost:4000`; para financiar um endereço de teste: `make fund ADDR=brdc1… AMOUNT=100`; a rede de teste **guarda os blocos em disco** (`net/data`) e continua depois de reiniciar; para recomeçar da gênese: `make reset-devnet` (com o nó parado).
+Tudo é `mix` (nada de `make`). **Simular a produção da moeda:** `mix brdc.devnet.up` e depois `mix brdc.simulate issuance` (o banco atesta a reserva, os emissores emitem, a Alice paga a Bob, a Bob resgata e a reserva é reduzida, com as regras conferidas no fim), ou passo a passo com `mix brdc.reserve`, `brdc.mint`, `brdc.burn` e `brdc.supply`. **Rede de teste de vários validadores:** `mix brdc.devnet.up` (cria 4 validadores na primeira vez, cada um num processo, com blocos em disco), `mix brdc.devnet.status`, `mix brdc.devnet.kill 2` (simula uma queda), `mix brdc.devnet.down`; a carteira acha o validador 1 em `127.0.0.1:4545`. Para ver a carteira funcionando (nó local de teste incluído): `mix phx.server` e abra `http://localhost:4000`; para financiar um endereço de teste: `mix brdc.fund brdc1… 100`; a rede de teste **guarda os blocos em disco** (`net/data`) e continua depois de reiniciar; para recomeçar da gênese: `mix brdc.devnet.reset` (com o nó parado).
 
 Para criar uma rede de teste local (as chaves ficam em `net/`, ignorada pelo git; detalhes no [Fluxo 07](docs/flows/07-keygen-and-genesis.md)):
 

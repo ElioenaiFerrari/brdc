@@ -11,12 +11,12 @@ Cada fase só começa com a anterior com testes passando **e documentada**. Ao f
 | 4 | P2P: TLS 1.3 mútuo, portas, limites, registros de endereço, descoberta, genesis, roteiro de dois computadores | `brdc_p2p` | **pronta** (canal seguro, limites, banimento, descoberta, porta pública, `keygen` e gênese; o roteiro de dois computadores fica para a Fase 7, com o nó) |
 | 5 | Contratos nativos: bens e propriedade, credenciais (CNH, identificação, casamento, divórcio), contratos entre partes | `brdc_ledger` | **pronta** (bens, credenciais e contratos entre partes; sem persistência em disco, ADR-0012) |
 | 6 | Carteira web: LiveView + criptografia no navegador, cofre cifrado, enviar e receber, emitir e operar bens, contratos e credenciais (assinatura coletiva) | `brdc_web` | **em andamento:** identidade visual, criptografia do navegador, cofre cifrado e telas de criar, importar e destravar prontos; saldo e envio de BRDC contra um nó local de um validador (Fase 7, primeiro passo); **contratos entre partes na carteira** (criar, aceitar e operar); faltam as telas de bens e credenciais, a assinatura coletiva, o nó com vários validadores e o roteiro de dois computadores |
-| 7 | Explorador, ferramentas e testnet: persistência, nó com vários validadores, explorador, mix tasks, simuladores, revisão de segurança, runbook ([plano](PHASE-7-PLAN.md)) | `brdc_node`, `brdc_web` | **em andamento:** M1 (persistência em disco) e M3 (diário de segurança do consenso) prontas; faltam M2 (vários validadores), M4 a M7 |
+| 7 | Explorador, ferramentas e testnet: persistência, nó com vários validadores, explorador, mix tasks, simuladores, revisão de segurança, runbook ([plano](PHASE-7-PLAN.md)) | `brdc_node`, `brdc_web` | **em andamento:** M1 (persistência em disco), M3 (diário de segurança) e M2 (nó com vários validadores em BFT por P2P) prontas; as ferramentas `mix brdc.*` (M5) estão em andamento (rede de teste `devnet.*`, `brdc.check`, `brdc.docs.check` prontos; sem `Makefile`); faltam M4, o resto da M5, M6 e M7 |
 | Futuro | Stake e validadores abertos, extensão de navegador, Pix/custódia real, votos | | fora de escopo |
 
 ## Fase 0 · o que está feito
 - Umbrella `brdc` com os apps `brdc_crypto`, `brdc_ledger`, `brdc_consensus`, `brdc_p2p` e `brdc_node` (`brdc_crypto`, `brdc_ledger` e `brdc_consensus` implementados; `brdc_p2p` com o canal seguro; `brdc_node` ainda esqueleto documentado).
-- Portão de qualidade: `mix check` (formato, credo estrito, testes) e `make docs-check`.
+- Portão de qualidade: `mix brdc.check` (formato, credo estrito, testes) e `mix brdc.docs.check`.
 - Gerador de diagramas no tema do projeto e o diagrama de arquitetura.
 - Documentação-base: README, CLAUDE.md, guia de conceitos, arquitetura, glossário, modelo de ameaças, matriz de testes e os ADRs 0001 a 0012.
 

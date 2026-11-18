@@ -13,16 +13,16 @@ A carteira mostra o saldo real e envia BRDC falando com um **nó** pela porta p�
 Diagrama deste fluxo: **a gerar** (diagramas adiados a pedido do dono).
 
 ## Passo a passo
-**Subir:** `make run` (ou `mix phx.server` na raiz) sobe a carteira (`http://localhost:4000`) e o nó local (porta 4545, rede `brdc-devnet`). Na primeira vez as chaves e a gênese são criadas em `net/` (fora do git, sementes `0600`).
+**Subir:** `mix phx.server` (na raiz) sobe a carteira (`http://localhost:4000`) e o nó local (porta 4545, rede `brdc-devnet`). Na primeira vez as chaves e a gênese são criadas em `net/` (fora do git, sementes `0600`).
 
-**Financiar (teste):** `make fund ADDR=brdc1… AMOUNT=100` assina como os dois emissores de teste (2 de 2) e envia o mint ao nó pela porta pública; o saldo aparece no próximo bloco.
+**Financiar (teste):** `mix brdc.fund brdc1… 100` assina como os dois emissores de teste (2 de 2) e envia o mint ao nó pela porta pública; o saldo aparece no próximo bloco.
 
 **Saldo:** ao destravar, o servidor consulta status e conta no nó e atualiza sozinho (a cada 1 s com transação pendente, a cada 5 s sem). Mostra saldo, pendente e `rede · bloco`.
 
 **Enviar**
-1. A pessoa informa o endereço de destino (validado pelo checksum) e o valor (`12,5`; `1.5` é recusado).
+1. A pessoa informa o endereço de destino (validado pelo checksum) e o valor. **O campo de valor tem máscara pt-BR** (`1.234,56`: milhares com ponto, vírgula decimal, até 6 casas, cursor preservado). **Um ponto digitado vira a vírgula decimal** (digitar `1250.5` dá `1.250,5`, nunca 12.505); vírgula e ponto a mais são ignorados; o que se cola (`R$ 10,50`, `10.50`, `1,234.56`) é normalizado. O parser estrito continua valendo por baixo (`1.5` colado cru nunca vira 15).
 2. O navegador pede ao servidor os **dados públicos** (`wallet:prepare`: rede, nonce, saldo, tabela de taxas) e monta a transação com a **taxa mínima** (1000 + 1 por byte).
-3. A tela **"Confira antes de assinar"** mostra valor, destino inteiro, taxa, total debitado e a rede; avisa que transferências não podem ser desfeitas.
+3. A tela **"Confira antes de assinar"** mostra valor, destino inteiro, taxa, total debitado e a rede (cada valor **se revela com o efeito de letras**, ver o [guia de design](../design/README.md)); avisa que transferências não podem ser desfeitas. Ao assinar, o botão mostra "Assinando e enviando…" cintilando até a rede responder.
 4. Ao confirmar, a chave **não extraível** assina; o navegador envia **só a transação pronta** (`wallet:submit`).
 5. O servidor confere que a transação é do endereço da carteira e a repassa ao nó. O nó valida (assinatura, nonce, saldo, taxa) contra o estado **com as pendentes** e responde com o id ou o motivo.
 6. No próximo bloco o saldo muda; o validador recebe a taxa.
@@ -37,7 +37,7 @@ Diagrama deste fluxo: **a gerar** (diagramas adiados a pedido do dono).
 - **Nó mentiroso** (omite, atrasa, mostra saldo ou nonce falsos): saldo ou nonce errados só fazem a transação falhar; a **rede** e o **total** aparecem na revisão. Sem provas de estado ainda ([ADR-0023](../adr/0023-local-node-and-wallet-as-client.md)).
 - **Sem conexão com o nó:** a carteira segue destravando e mostra "Sem conexão com a rede"; enviar fica indisponível.
 - **Transferência para endereço errado (válido):** não há como desfazer ou bloquear (ADR-0009). Por isso a revisão mostra o endereço inteiro.
-- **Nó local reiniciado:** o disco (`net/data`) guarda os blocos: ao subir, o nó relê e **reexecuta** o log (ADR-0012), então saldos, bens, credenciais e propostas continuam. Para recomeçar da gênese, pare o nó e rode `make reset-devnet` (`mix brdc.devnet.reset`). Verificado com `kill -9` do servidor.
+- **Nó local reiniciado:** o disco (`net/data`) guarda os blocos: ao subir, o nó relê e **reexecuta** o log (ADR-0012), então saldos, bens, credenciais e propostas continuam. Para recomeçar da gênese, pare o nó e rode `mix brdc.devnet.reset`. Verificado com `kill -9` do servidor.
 
 ## Onde está no código
 `apps/brdc_node/lib/brdc_node/node.ex`, `handler.ex`, `client.ex`; `apps/brdc_dev/` (`devnet.ex`, `funding.ex`, `application.ex`, tarefas `brdc.fund` e `brdc.balance`); `apps/brdc_web/lib/brdc_web_web/wallet/chain.ex`, `live/wallet_live.ex`, `components/send_components.ex`; `apps/brdc_web/assets/js/send_hook.js` e `crypto/{send,amount}.mjs`; `apps/brdc_ledger/lib/brdc_ledger/amount.ex`.

@@ -39,7 +39,7 @@ BrdcCrypto.Ed25519.verify("oi", sig, a.public_key)   # => true
 ```
 
 ## Como o JS concorda com o Elixir
-`vectors/crypto.json` guarda resultados conhecidos (semente, chave pública, endereço, SLIP-10, hash etiquetado). O Elixir os confere em `shared_vectors_test.exs` e o JavaScript em `tools/js/verify-vectors.mjs` (`make js-vectors`), com implementação **independente** (só Node, sem bibliotecas). Se uma das pontas mudar o formato, a outra quebra: é o que impede a carteira web e o nó de divergirem ([T11](../THREAT-MODEL.md)).
+`vectors/crypto.json` guarda resultados conhecidos (semente, chave pública, endereço, SLIP-10, hash etiquetado). O Elixir os confere em `shared_vectors_test.exs` e o JavaScript em `tools/js/verify-vectors.mjs` (`mix brdc.js.test`), com implementação **independente** (só Node, sem bibliotecas). Se uma das pontas mudar o formato, a outra quebra: é o que impede a carteira web e o nó de divergirem ([T11](../THREAT-MODEL.md)).
 
 ## Limites honestos desta fase
 - A BEAM não zera a memória: a chave privada em `Account` fica na memória até o coletor de lixo agir. **No produto quem deriva é o navegador**; este módulo é para testes e ferramentas de desenvolvimento.

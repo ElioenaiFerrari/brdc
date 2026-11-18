@@ -6,18 +6,15 @@ defmodule Mix.Tasks.Brdc.Balance do
       mix brdc.balance brdc1… [--port 4545]
   """
   use Mix.Task
-  alias BrdcCrypto.Address
   alias BrdcLedger.Amount
   alias BrdcNode.Client
 
   @impl Mix.Task
   def run(args) do
-    {opts, rest, _} = OptionParser.parse(args, strict: [port: :integer])
-    Mix.Task.run("app.config")
-    endpoint = {~c"127.0.0.1", opts[:port] || 4545}
+    {_opts, rest, endpoint, net_dir} = BrdcDev.Cli.parse(args, [], @moduledoc, "")
 
-    with [address] <- rest,
-         {:ok, hash} <- Address.decode(address),
+    with [who] <- rest,
+         hash = who |> then(&BrdcDev.Cli.resolve!(net_dir, &1)) |> BrdcDev.Wallets.hash(),
          {:ok, status} <- Client.status(endpoint),
          {:ok, acc} <- Client.account(endpoint, hash) do
       Mix.shell().info(
@@ -29,7 +26,10 @@ defmodule Mix.Tasks.Brdc.Balance do
       if acc.pending_balance != acc.balance,
         do: Mix.shell().info("com pendentes: #{Amount.full(acc.pending_balance)} BRDC")
     else
-      _ -> Mix.raise("uso: mix brdc.balance ENDEREÇO [--port 4545] (o nó precisa estar rodando)")
+      _ ->
+        Mix.raise(
+          "uso: mix brdc.balance QUEM [--port P] (carteira de teste ou endereço; o nó precisa estar no ar)"
+        )
     end
   end
 end

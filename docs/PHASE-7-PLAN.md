@@ -24,7 +24,7 @@ O ledger, o consenso (motor sem I/O, testado por simulação) e o P2P (TLS 1.3 m
 `BrdcNode.BlockStore` (behaviour) + implementação em `:file`: registro com tamanho, soma de verificação e bloco com seu certificado; escrita com `sync` antes de responder; recuperação **tolerante a cauda truncada** (queda no meio da escrita). Subida do nó = replay de blocos + conferência da raiz de estado e dos certificados. Instantâneo periódico para não reler tudo. `mix brdc.devnet.reset` apaga.
 **Testes:** reinício preserva saldos, contratos, bens e credenciais; cauda truncada e registro corrompido; bloco com certificado inválido no disco é recusado; propriedade "replay = estado ao vivo".
 
-### M2 · Nó com vários validadores
+### M2 · Nó com vários validadores — **pronta** ([fluxo 18](flows/18-validator-network.md), [ADR-0027](adr/0027-block-signers-and-fee-split.md) provisório)
 `BrdcNode.Replica`: liga o `Engine` (um por altura) à rede: **pares** a partir dos registros de endereço e da descoberta; **gossip de transações** (mempool replicada, com limite e deduplicação); **propostas, votos e certificado** pelos canais TLS; **temporizadores** de rodada; **sincronização de blocos** para quem entra atrasado (confere certificado de cada bloco). Cada nó mantém a **porta pública**, então a carteira conecta em qualquer um. Registro de **evidência de equivocação** (sem punição ainda).
 **Testes (4 validadores na mesma VM, em TCP/TLS real):** bloco decidido por todos; **cai 1 → continua** (3 de 4); **caem 2 → para e retoma** quando volta; proponente falho gira; nó atrasado sincroniza; transação enviada a qualquer nó chega a todos; saldos finais iguais; sem fork.
 
@@ -34,7 +34,7 @@ Rodada e bloqueio **gravados antes de cada voto**, para um validador que reinici
 ### M4 · Explorador
 Página `/explorer` (LiveView, só leitura) falando com o nó pela porta pública: blocos, transações, contas, contratos, bens, credenciais, validadores, **quem assinou cada bloco** (pelo certificado) e busca. Consultas novas na porta pública (intervalo de blocos, transação por id) com limites. **Teste:** o que o explorador mostra bate com o estado do nó; consulta fora de limite é recusada.
 
-### M5 · Ferramentas
+### M5 · Ferramentas — **em andamento** (tudo por `mix`, sem `Makefile`; rede de teste `devnet.init|up|down|status|logs|kill|reset` e `brdc.node` prontos, ver [NETWORKS](NETWORKS.md))
 Catálogo de `mix brdc.*` do `brdc_dev` (init/up/down/status/reset/logs, wallet.new, send, blocks, explorer), **simuladores** (blocos sob demanda, equivocação, rotação de validadores) e `mix brdc.docs.check` com exemplos executáveis. Só dev, nunca em release.
 
 ### M6 · Roteiro de dois computadores

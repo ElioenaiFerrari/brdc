@@ -35,10 +35,12 @@ Um fluxo por funcionalidade (texto e diagrama) em `docs/flows/`, à medida que c
 - [15 — Contratos entre partes na carteira](flows/15-contracts-in-wallet.md) (Fase 6)
 - [16 — Credenciais e assinatura coletiva dos órgãos](flows/16-credentials-and-collective-signing.md) (Fase 6)
 - [17 — Bens na carteira (dono e comprador)](flows/17-assets-in-wallet.md) (Fase 6)
+- [18 — Rede de vários validadores](flows/18-validator-network.md) (Fase 7)
+- [19 — Produção da moeda (simulada): lastro, emissão, resgate](flows/19-coin-issuance-simulation.md) (Fase 7)
 
 A [arquitetura](ARCHITECTURE.md) dá a visão geral.
 
 Próxima fase: [plano da Fase 7](PHASE-7-PLAN.md) (aprovado; em andamento).
 
 ## Diagramas
-Gerados por código em `scripts/diagrams/` (skill `diagram-design`, tema em [diagrams/THEME.md](diagrams/THEME.md)); `make diagrams` regenera. Nunca ASCII, nunca editar o PNG à mão.
+Gerados por código em `scripts/diagrams/` (skill `diagram-design`, tema em [diagrams/THEME.md](diagrams/THEME.md)); `mix brdc.diagrams` regenera. Nunca ASCII, nunca editar o PNG à mão.

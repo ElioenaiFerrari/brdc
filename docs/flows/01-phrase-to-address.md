@@ -22,7 +22,7 @@ Como uma frase de 24 palavras (mais a passphrase opcional, a "25ª palavra") vir
 ## O que é verificado e por quem
 - A **frase**: o checksum detecta palavra trocada ou faltando (`Bip39.to_entropy/1`).
 - O **endereço**: o checksum bech32m detecta erro de digitação (`Address.decode/1`).
-- A **concordância Elixir/JS**: `shared_vectors_test.exs` e `make js-vectors` sobre `vectors/crypto.json`.
+- A **concordância Elixir/JS**: `shared_vectors_test.exs` e `mix brdc.js.test` sobre `vectors/crypto.json`.
 - A **passphrase não é verificável**: qualquer uma gera uma carteira válida.
 
 ## O que pode dar errado

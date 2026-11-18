@@ -15,7 +15,7 @@ Fatos verificados em 2026-11-17: o WebCrypto **nativo** tem Ed25519 (Chrome 137,
    - **BIP-39** (lista de palavras, checksum) e **SLIP-10** (derivação endurecida);
    - **codificação determinística** (ADR-0011) e montagem da transação.
 3. **Chave de assinatura não extraível:** depois de derivada, a semente é importada no WebCrypto como `CryptoKey` **não extraível** (PKCS8), e a semente é apagada da memória JS (no melhor esforço). Assinar passa a ser pedir ao navegador.
-4. **Prova de concordância com o nó:** os mesmos vetores (`vectors/crypto.json`) e um teste de **concordância em massa** (entradas aleatórias e todos os tamanhos de 0 a 600 bytes nas bordas de bloco) entre o JS e o Elixir, rodando no `make check`. Uma divergência em hash ou assinatura aparece como "assinatura inválida" no nó.
+4. **Prova de concordância com o nó:** os mesmos vetores (`vectors/crypto.json`) e um teste de **concordância em massa** (entradas aleatórias e todos os tamanhos de 0 a 600 bytes nas bordas de bloco) entre o JS e o Elixir, rodando no `mix brdc.check`. Uma divergência em hash ou assinatura aparece como "assinatura inválida" no nó.
 5. **Navegadores mínimos:** Chrome 137, Firefox 129, Safari 17. Sem fallback em JS para Ed25519: navegador antigo recebe um aviso claro.
 6. **Se um dia precisarmos de Argon2id** (melhor KDF para o cofre) ou de outro primitivo, a decisão volta por ADR, com a justificativa de cadeia de suprimentos.
 

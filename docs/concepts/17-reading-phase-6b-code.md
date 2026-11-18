@@ -18,7 +18,7 @@ Pré-requisito: [Como ler a criptografia do navegador](16-reading-phase-6a-code.
 - **Limpeza ativa:** ao sair de uma tela, os campos e a lista de palavras são esvaziados.
 
 ## Rode você mesmo
-`make js-test` (30 testes). Para ver a tela: `mix phx.server` em `apps/brdc_web` e abra `http://localhost:4000/` (a carteira) ou `/design` (pré-visualização).
+`mix brdc.js.test` (30 testes). Para ver a tela: `mix phx.server` em `apps/brdc_web` e abra `http://localhost:4000/` (a carteira) ou `/design` (pré-visualização).
 
 ## Limites honestos
 Veja o [Fluxo 13](../flows/13-wallet-vault.md): o hook e o IndexedDB foram verificados à mão, não por teste automatizado.

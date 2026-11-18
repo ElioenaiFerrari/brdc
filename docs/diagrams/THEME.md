@@ -32,7 +32,7 @@ Instrument Serif (título), Geist (nomes) e Geist Mono (termos técnicos: crates
 Os diagramas são código: `scripts/diagrams/` (`lib.py` com o tema e `d_*.py` com cada diagrama).
 
 ```bash
-make diagrams                 # regenera todos (precisa do navegador Brave para o PNG)
+mix brdc.diagrams                 # regenera todos (precisa do navegador Brave para o PNG)
 python3 scripts/diagrams/generate.py architecture-overview   # só um
 ```
 

@@ -30,6 +30,7 @@ Cada decisão de segurança ou produto vira um ADR: contexto, decisão, alternat
 | [0024](0024-collective-signing-by-organs.md) | Assinatura coletiva dos órgãos: propostas no nó, aprovações no navegador | Aceito |
 | [0025](0025-block-interval-and-otp-libraries.md) | Intervalo entre blocos e bibliotecas OTP da Fase 7 | Aceito |
 | [0026](0026-consensus-safety-journal.md) | Diário de segurança do consenso: gravar antes de transmitir | Aceito |
+| [0027](0027-block-signers-and-fee-split.md) | Quem aparece em `signers` do bloco e como a taxa é repartida | **Proposto** (provisório) |
 
 ## Decisões PENDENTES (esperam o dono do produto)
 Nada abaixo entra em código antes da resposta.
