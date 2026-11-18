@@ -16,7 +16,14 @@ defmodule BrdcWebWeb.ExplorerLive do
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
-     assign(socket, page_title: "Explorador", error: nil, data: nil, offline: false, query: "")}
+     assign(socket,
+       page_title: "Explorador",
+       error: nil,
+       data: nil,
+       offline: false,
+       outdated: false,
+       query: ""
+     )}
   end
 
   @impl true
@@ -65,8 +72,9 @@ defmodule BrdcWebWeb.ExplorerLive do
     socket = assign(socket, params: params, error: nil)
 
     case fetch(action, params) do
-      {:ok, data} -> assign(socket, data: data, offline: false)
-      {:error, :offline} -> assign(socket, data: nil, offline: true)
+      {:ok, data} -> assign(socket, data: data, offline: false, outdated: false)
+      {:error, :offline} -> assign(socket, data: nil, offline: true, outdated: false)
+      {:error, :outdated_node} -> assign(socket, data: nil, offline: false, outdated: true)
       {:error, :not_found} -> assign(socket, data: nil, offline: false, error: not_found(action))
     end
   end
@@ -123,6 +131,15 @@ defmodule BrdcWebWeb.ExplorerLive do
           <p class="mt-2 text-sm text-[var(--brdc-muted)]">
             Não consegui falar com o nó. Suba a rede de teste com <code>mix brdc.devnet.up</code>
             e recarregue.
+          </p>
+        </section>
+
+        <section :if={@outdated} role="alert" class="brdc-card p-6">
+          <h1 class="text-lg font-bold">O nó está no ar, mas é de uma versão antiga</h1>
+          <p class="mt-2 text-sm text-[var(--brdc-muted)]">
+            Ele não responde às consultas do explorador (foi iniciado antes de elas existirem). Reinicie a rede de teste
+            (os blocos ficam no disco): <code>mix brdc.devnet.down</code>
+            e depois <code>mix brdc.devnet.up</code>.
           </p>
         </section>
 

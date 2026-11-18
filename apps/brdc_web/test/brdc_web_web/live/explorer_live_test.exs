@@ -231,4 +231,36 @@ defmodule BrdcWebWeb.ExplorerLiveTest do
     refute response(conn, 200) =~ "phx-hook"
     refute response(conn, 200) =~ "Assinar"
   end
+
+  test "nó no ar mas de versão antiga (não conhece as consultas do explorador): avisa, não diz 'sem conexão'",
+       %{conn: conn} do
+    # um servidor que só entende o status (como um nó anterior ao explorador) e responde bad_query ao resto
+    {:ok, guard} = Guard.start_link(sweep_ms: :never)
+
+    # o status precisa de um nó de verdade; o resto responde bad_query
+    {:ok, node} =
+      BrdcNode.Node.start_link(
+        genesis:
+          elem(
+            Genesis.new(chain_id: "old", validators: [pub(1)], issuers: [pub(10)], threshold: 1),
+            1
+          ),
+        seed: seed(1),
+        block_interval_ms: :manual
+      )
+
+    handler = fn
+      :status, body -> Handler.fun(node).(:status, body)
+      _kind, _body -> {:error, "bad_query"}
+    end
+
+    {:ok, port_pid} = PublicPort.start_link(guard: guard, handler: handler, port: 0)
+    Application.put_env(:brdc_web, :node, host: ~c"127.0.0.1", port: PublicPort.port(port_pid))
+    on_exit(fn -> catch_exit(PublicPort.stop(port_pid)) end)
+
+    {:ok, _view, html} = live(conn, ~p"/explorer")
+    assert html =~ "versão antiga"
+    assert html =~ "mix brdc.devnet.up"
+    refute html =~ "Sem conexão com a rede"
+  end
 end

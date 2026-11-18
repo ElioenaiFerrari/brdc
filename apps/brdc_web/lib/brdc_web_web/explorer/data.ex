@@ -59,7 +59,7 @@ defmodule BrdcWebWeb.Explorer.Data do
   def address(hash), do: Bech32m.encode(Address.hrp(), hash)
 
   @doc "Visão geral: estado da rede, últimos blocos, pendentes e validadores."
-  @spec overview() :: {:ok, map()} | {:error, :offline}
+  @spec overview() :: {:ok, map()} | {:error, :offline | :outdated_node}
   def overview do
     with ep when ep != nil <- Chain.endpoint(),
          {:ok, st} <- Client.status(ep),
@@ -74,6 +74,8 @@ defmodule BrdcWebWeb.Explorer.Data do
          validators: Enum.map(validators, &%{pub: &1, address: Address.from_public_key(&1)})
        }}
     else
+      # o nó responde ao status mas não conhece as consultas do explorador: é de uma versão anterior
+      {:error, "bad_query"} -> {:error, :outdated_node}
       _ -> {:error, :offline}
     end
   end
