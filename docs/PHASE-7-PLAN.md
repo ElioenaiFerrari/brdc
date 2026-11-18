@@ -28,7 +28,7 @@ O ledger, o consenso (motor sem I/O, testado por simulação) e o P2P (TLS 1.3 m
 `BrdcNode.Replica`: liga o `Engine` (um por altura) à rede: **pares** a partir dos registros de endereço e da descoberta; **gossip de transações** (mempool replicada, com limite e deduplicação); **propostas, votos e certificado** pelos canais TLS; **temporizadores** de rodada; **sincronização de blocos** para quem entra atrasado (confere certificado de cada bloco). Cada nó mantém a **porta pública**, então a carteira conecta em qualquer um. Registro de **evidência de equivocação** (sem punição ainda).
 **Testes (4 validadores na mesma VM, em TCP/TLS real):** bloco decidido por todos; **cai 1 → continua** (3 de 4); **caem 2 → para e retoma** quando volta; proponente falho gira; nó atrasado sincroniza; transação enviada a qualquer nó chega a todos; saldos finais iguais; sem fork.
 
-### M3 · Memória de voto do consenso (WAL)
+### M3 · Memória de voto do consenso (WAL) — **pronta** ([ADR-0026](adr/0026-consensus-safety-journal.md))
 Rodada e bloqueio **gravados antes de cada voto**, para um validador que reinicia **nunca votar duas vezes** na mesma altura e rodada. **Teste:** matar e subir o nó no meio de uma rodada sem equivocar.
 
 ### M4 · Explorador

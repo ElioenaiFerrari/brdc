@@ -145,6 +145,16 @@ Invariante → teste que o cobre. Linhas *planejadas* ainda não têm teste: ent
 | Oferta, aceite, cancelamento e finalização no JS têm cargas **iguais** às do Elixir | `assets/js/crypto/assets.test.mjs` + `vectors/tx.json` |
 | Ciclo pela rede: classe, registro, oferta, escrow, finalização depois da janela (relógio) | `apps/brdc_dev/test/brdc_dev/devnet_e2e_test.exs` |
 
+## Diário de segurança do consenso (M3, pronto)
+| Invariante | Teste |
+|---|---|
+| Voto e proposta: ida e volta; lixo, sobra, tipo desconhecido e truncado são recusados | `apps/brdc_consensus/test/brdc_consensus/restore_test.exs` |
+| **Sem** diário o validador equivoca ao voltar; **com** diário não assina nada que contradiga | `restore_test.exs` |
+| O bloqueio sobrevive à queda (prevota nulo numa proposta nova); sem diário o bloqueio se perde | `restore_test.exs` |
+| Mensagens de outros e de outra altura no diário são ignoradas; restaurar é idempotente | `restore_test.exs` |
+| Quedas aleatórias no simulador: nunca equivocação, no máximo um bloco final; as quedas acontecem de fato | `restore_test.exs` (propriedades, 8 execuções repetidas) |
+| Diário em disco: só mensagens próprias, ordem, cauda rasgada descartada, ilegível é fatal, troca de altura, falha de gravação | `apps/brdc_node/test/brdc_node/consensus_wal_test.exs` |
+
 ## Persistência em disco (M1, pronto)
 | Invariante | Teste |
 |---|---|

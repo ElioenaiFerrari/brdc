@@ -11,6 +11,11 @@ defmodule BrdcConsensus.Sim do
   (mensagens entre grupos **esperam** o fim da partição: modelo de sincronia parcial) e `drop`
   (probabilidade de perder uma mensagem; usado só em testes de **segurança**, porque o motor
   não retransmite: quem retransmite é a camada de gossip do nó).
+
+  **Quedas** (`crashes: [{nó, em_ms, fora_ms}]`): o nó perde a memória, fica fora do ar por `fora_ms` (o que
+  chegar nesse intervalo se perde) e volta com `Engine.restore/2` a partir do **diário** das mensagens que
+  assinou, gravado **antes** de cada transmissão, como o nó de verdade faz. `journal: false` simula um nó SEM
+  diário (volta do zero), para mostrar por que o diário existe.
   """
   alias BrdcConsensus.{Engine, Vote}
 
@@ -22,11 +27,14 @@ defmodule BrdcConsensus.Sim do
             opts: %{},
             decisions: %{},
             evidence: [],
-            hash_fn: nil
+            hash_fn: nil,
+            journals: %{},
+            down: MapSet.new(),
+            restarts: 0
 
   @doc """
   Roda uma altura. Opções: `:n` (validadores), `:seed` (acaso), `:behaviors` (mapa índice → comportamento),
-  `:delay`, `:partition`, `:drop`, `:max_time`, `:valid_fn`, `:height`.
+  `:delay`, `:partition`, `:drop`, `:max_time`, `:valid_fn`, `:height`, `:crashes`, `:journal` (padrão `true`).
   Devolve `%{decisions: %{índice => {bloco, certificado}}, evidence: [...], time: ms, validators: [...]}`.
   """
   @spec run(keyword()) :: map()
@@ -53,7 +61,7 @@ defmodule BrdcConsensus.Sim do
             valid_fn: Keyword.get(opts, :valid_fn, fn _ -> true end)
           )
 
-        {i, %{engine: engine, behavior: Map.get(behaviors, i, :honest)}}
+        {i, %{engine: engine, fresh: engine, behavior: Map.get(behaviors, i, :honest)}}
       end
 
     sim = %__MODULE__{
@@ -65,13 +73,27 @@ defmodule BrdcConsensus.Sim do
         delay: Keyword.get(opts, :delay, {5, 50}),
         partition: Keyword.get(opts, :partition),
         drop: Keyword.get(opts, :drop, 0.0),
-        max_time: Keyword.get(opts, :max_time, 120_000)
+        max_time: Keyword.get(opts, :max_time, 120_000),
+        journal: Keyword.get(opts, :journal, true)
       }
     }
 
     sim = Enum.reduce(0..(n - 1), sim, fn i, acc -> start_node(acc, i) end)
+
+    sim =
+      Enum.reduce(Keyword.get(opts, :crashes, []), sim, fn {i, at, down}, acc ->
+        acc |> schedule(at, {:crash, i}) |> schedule(at + down, {:restart, i})
+      end)
+
     sim = loop(sim)
-    %{decisions: sim.decisions, evidence: sim.evidence, time: sim.time, validators: pubs}
+
+    %{
+      decisions: sim.decisions,
+      evidence: sim.evidence,
+      time: sim.time,
+      validators: pubs,
+      restarts: sim.restarts
+    }
   end
 
   # --- laço principal -----------------------------------------------------------
@@ -99,6 +121,8 @@ defmodule BrdcConsensus.Sim do
 
   defp run_event(sim, {:deliver, to, msg}), do: feed(sim, to, kind(msg))
   defp run_event(sim, {:timer, node, ev}), do: feed(sim, node, ev)
+  defp run_event(sim, {:crash, i}), do: %{sim | down: MapSet.put(sim.down, i)}
+  defp run_event(sim, {:restart, i}), do: restart(sim, i)
 
   defp kind(%Vote{} = v), do: {:vote, v}
   defp kind(%BrdcConsensus.Proposal{} = p), do: {:proposal, p}
@@ -115,14 +139,29 @@ defmodule BrdcConsensus.Sim do
   end
 
   defp feed(sim, i, ev) do
-    case sim.nodes[i] do
-      %{behavior: :silent} ->
+    cond do
+      sim.nodes[i].behavior == :silent ->
         sim
 
-      %{engine: engine} ->
-        {engine, actions} = Engine.handle(engine, ev)
+      MapSet.member?(sim.down, i) ->
+        sim
+
+      true ->
+        {engine, actions} = Engine.handle(sim.nodes[i].engine, ev)
         sim |> put_engine(i, engine) |> do_actions(i, actions)
     end
+  end
+
+  # volta da queda: motor novo + diário (se houver); sem diário, volta do zero (nó ingênuo)
+  defp restart(sim, i) do
+    sim = %{sim | down: MapSet.delete(sim.down, i), restarts: sim.restarts + 1}
+    fresh = sim.nodes[i].fresh
+    journal = if sim.opts.journal, do: Map.get(sim.journals, i, []), else: []
+
+    {engine, actions} =
+      if journal == [], do: Engine.start(fresh), else: Engine.restore(fresh, journal)
+
+    sim |> put_engine(i, engine) |> do_actions(i, actions)
   end
 
   defp put_engine(sim, i, engine),
@@ -130,7 +169,16 @@ defmodule BrdcConsensus.Sim do
 
   # --- ações ------------------------------------------------------------------------
 
-  defp do_actions(sim, i, actions), do: Enum.reduce(actions, sim, &do_action(&2, i, &1))
+  # o diário é gravado ANTES de qualquer transmissão do lote (como no nó de verdade)
+  defp do_actions(sim, i, actions) do
+    sim = journal(sim, i, actions)
+    Enum.reduce(actions, sim, &do_action(&2, i, &1))
+  end
+
+  defp journal(sim, i, actions) do
+    own = for {:broadcast, msg} <- actions, do: msg
+    %{sim | journals: Map.update(sim.journals, i, own, &(&1 ++ own))}
+  end
 
   defp do_action(sim, i, {:broadcast, msg}) do
     others = for j <- 0..(sim.opts.n - 1), j != i, do: j

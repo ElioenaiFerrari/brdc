@@ -81,6 +81,31 @@ defmodule BrdcConsensus.Engine do
   def handle(%__MODULE__{decision: d} = e, _event) when d != nil, do: {e, []}
   def handle(e, event), do: e |> event(event) |> settle() |> flush()
 
+  @doc """
+  Retoma uma altura depois de uma queda, a partir do **diário** das mensagens que **este validador
+  assinou e transmitiu** (propostas e votos, na ordem em que saíram; mensagens de outros são ignoradas).
+
+  Reconstrói rodada, passo e **bloqueio** (`locked`: o último precommit num bloco) e devolve as ações
+  para continuar (prazos e, se for o proponente sem proposta feita, o pedido de bloco). A garantia:
+  o motor **não assina nada que contradiga o diário** (mesma rodada e tipo, outro bloco).
+
+  O diário precisa ter sido gravado **antes** de cada transmissão (quem roda o motor cuida disso);
+  assim, o que saiu da máquina está no diário, e o que não foi gravado nunca saiu.
+  """
+  @spec restore(%__MODULE__{}, [Proposal.t() | Vote.t()]) :: {%__MODULE__{}, [term()]}
+  def restore(%__MODULE__{} = e, messages) do
+    mine =
+      Enum.filter(messages, fn
+        %Proposal{proposer: who, height: h} -> who == e.pub and h == e.height
+        %Vote{voter: who, height: h} -> who == e.pub and h == e.height
+        _ -> false
+      end)
+
+    e = Enum.reduce(mine, e, &ingest_own/2)
+    e = resume_position(e)
+    e |> resume_start() |> settle() |> flush()
+  end
+
   @doc "Decisão tomada, se houver."
   @spec decision(%__MODULE__{}) :: nil | {term(), Certificate.t()}
   def decision(%__MODULE__{decision: d}), do: d
@@ -125,17 +150,72 @@ defmodule BrdcConsensus.Engine do
 
   defp own_proposal?(e), do: Map.has_key?(e.proposals, e.round)
 
+  # NUNCA assina duas vezes a mesma proposta de rodada: um segundo bloco na mesma rodada é equivocação
   defp propose(e, block, hash, valid_round) do
-    p = Proposal.sign(e.chain_id, e.height, e.round, valid_round, block, hash, e.seed)
-    e |> ingest_proposal(p) |> emit({:broadcast, p})
+    if own_proposal?(e) do
+      e
+    else
+      p = Proposal.sign(e.chain_id, e.height, e.round, valid_round, block, hash, e.seed)
+      e |> ingest_proposal(p) |> emit({:broadcast, p})
+    end
   end
 
+  # NUNCA assina dois votos do mesmo tipo na mesma rodada (nem depois de reiniciar: ver `restore/2`)
   defp cast(e, type, hash) do
-    v = Vote.sign(e.chain_id, type, e.height, e.round, hash, e.seed)
-    e |> ingest_vote(v) |> emit({:broadcast, v})
+    if own_vote?(e, type, e.round) do
+      e
+    else
+      v = Vote.sign(e.chain_id, type, e.height, e.round, hash, e.seed)
+      e |> ingest_vote(v) |> emit({:broadcast, v})
+    end
   end
+
+  defp own_vote?(e, type, round),
+    do: e.votes |> Map.get({type, round}, %{}) |> Map.has_key?(e.pub)
 
   # --- entrada de mensagens ---------------------------------------------------
+
+  defp ingest_own(%Proposal{} = p, e), do: ingest_proposal(e, p)
+  defp ingest_own(%Vote{} = v, e), do: ingest_vote(e, v)
+
+  # rodada, passo e bloqueio a partir dos votos e propostas próprios
+  defp resume_position(e) do
+    my_votes = for {{type, r}, m} <- e.votes, v = Map.get(m, e.pub), v != nil, do: {type, r, v}
+    my_props = for {r, p} <- e.proposals, p.proposer == e.pub, do: r
+    round = Enum.max([0 | Enum.map(my_votes, &elem(&1, 1)) ++ my_props])
+    locked = last_lock(my_votes)
+
+    # `valid` só serve a quem propõe e precisa do bloco; sem ele, volta pelas mensagens dos outros
+    valid = if locked && Map.has_key?(e.blocks, elem(locked, 0)), do: locked, else: nil
+    %{e | round: round, step: resume_step(my_votes, round), locked: locked, valid: valid}
+  end
+
+  defp resume_step(my_votes, round) do
+    voted = fn type -> Enum.any?(my_votes, fn {t, r, _} -> t == type and r == round end) end
+
+    cond do
+      voted.(:precommit) -> :precommit
+      voted.(:prevote) -> :prevote
+      true -> :propose
+    end
+  end
+
+  # o bloqueio é o último precommit num bloco (não nulo)
+  defp last_lock(my_votes) do
+    my_votes
+    |> Enum.filter(fn {t, _r, v} -> t == :precommit and v.block_hash != nil end)
+    |> Enum.max_by(fn {_t, r, _v} -> r end, fn -> nil end)
+    |> case do
+      nil -> nil
+      {_t, r, v} -> {v.block_hash, r}
+    end
+  end
+
+  # o que falta fazer para a altura continuar andando
+  defp resume_start(%{step: :propose} = e), do: start_round(e, e.round)
+
+  defp resume_start(%{step: step, round: r} = e) when step in [:prevote, :precommit],
+    do: emit(e, {:schedule_timeout, step, r})
 
   defp ingest_proposal(e, %Proposal{} = p) do
     cond do

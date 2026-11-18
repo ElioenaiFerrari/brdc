@@ -19,6 +19,41 @@ defmodule BrdcConsensus.Vote do
           signature: <<_::512>>
         }
 
+  @codec [:u8, :u64, :u64, :bytes, {:fixed, 32}, {:fixed, 64}]
+
+  @doc "Codificação para a rede e para o diário em disco (ordem fixa, sem ambiguidade)."
+  @spec encode(t()) :: binary()
+  def encode(%__MODULE__{} = v) do
+    Encoding.encode(@codec, [
+      type_byte(v.type),
+      v.height,
+      v.round,
+      v.block_hash || <<>>,
+      v.voter,
+      v.signature
+    ])
+  end
+
+  @doc "Decodifica; recusa lixo, sobras, tipo desconhecido e hash de tamanho estranho (a assinatura é conferida por `valid?/2`)."
+  @spec decode(binary()) :: {:ok, t()} | {:error, :malformed}
+  def decode(bin) when is_binary(bin) do
+    with {:ok, [type, height, round, hash, voter, sig]} <- Encoding.decode(@codec, bin),
+         {:ok, type} <- type_from_byte(type),
+         true <- byte_size(hash) in [0, 32] do
+      {:ok,
+       %__MODULE__{
+         type: type,
+         height: height,
+         round: round,
+         block_hash: if(hash == <<>>, do: nil, else: hash),
+         voter: voter,
+         signature: sig
+       }}
+    else
+      _ -> {:error, :malformed}
+    end
+  end
+
   @doc "O que é assinado."
   @spec doc(
           String.t(),
@@ -69,4 +104,8 @@ defmodule BrdcConsensus.Vote do
 
   defp type_byte(:prevote), do: 1
   defp type_byte(:precommit), do: 2
+
+  defp type_from_byte(1), do: {:ok, :prevote}
+  defp type_from_byte(2), do: {:ok, :precommit}
+  defp type_from_byte(_), do: :error
 end

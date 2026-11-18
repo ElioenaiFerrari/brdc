@@ -13,7 +13,7 @@ O nó guarda tudo em memória: um reinício apaga a rede. É preciso persistir b
 5. **Escrita:** o nó só responde "incluída" depois do `sync` do bloco.
 6. **Raiz de estado:** continua a árvore de Merkle simples de hoje. A **árvore esparsa com provas de inclusão** fica para quando o explorador ou um cliente leve precisarem (ADR próprio).
 7. **Interface** `BrdcNode.BlockStore` (`behaviour`), para trocar a implementação sem tocar no consenso nem no ledger.
-8. **Memória de voto do consenso (WAL):** rodada e bloqueio gravados antes de cada voto, em arquivo próprio (etapa M3).
+8. **Memória de voto do consenso (diário/WAL):** cada proposta e voto assinados são gravados antes de transmitir, em arquivo próprio: ver o [ADR-0026](0026-consensus-safety-journal.md).
 9. **Propostas dos órgãos** (ADR-0024) ficam em `proposals.bin`, gravado por **troca atômica** (arquivo ao lado + renomear), **descartáveis** (não são consenso): ao ler, cada uma é conferida de novo contra o estado; arquivo ilegível = lista vazia.
 10. **Hash da gênese** em `genesis.hash`: o nó recusa abrir o disco de outra rede (`:wrong_genesis`).
 
