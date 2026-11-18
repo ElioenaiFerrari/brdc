@@ -48,5 +48,13 @@ Registrar um bem, emitir uma credencial, vetar e pôr gravame exigem **várias a
 
 A proposta e as aprovações **não têm segredo** (são assinaturas sobre um documento público), então podem circular pela rede ou por um link. Cada assinante **sempre vê o que está assinando**, escrito em texto claro, antes de confirmar. Projeto da tela e do canal: Fase 6 (ainda **planejado**).
 
+## Efeitos de texto e máscara de dinheiro
+Tudo em `assets/js/ui_effects.js`, ligado por **atributos** (sem estilo embutido: CSP estrita):
+- **`data-decrypt`: texto que se revela ("descriptografando").** Quando o conteúdo do elemento muda (e na primeira aparição), as letras se embaralham em **verde** e se resolvem da esquerda para a direita em até 0,9 s; dígito vira dígito, letra vira letra da mesma caixa, espaços e pontuação ficam no lugar. Usado em saldo, endereço, chip da rede e valores das telas de revisão.
+- **`data-scramble-loading`: carregamento.** O texto continua legível e uma parte dos caracteres cintila ("Abrindo a carteira…", "Conectando à rede…"). Nos botões, `loadingLabel` mostra "Descriptografando…", "Criptografando…" ou "Assinando e enviando…" enquanto o trabalho dura.
+- **`data-money`: máscara de dinheiro** nos campos de valor (envio, preço de bem, termos de contrato em BRDC).
+- **Acessibilidade:** o texto verdadeiro fica sempre disponível a leitores de tela (`.brdc-sr`), os glifos são `aria-hidden`, e quem pede **reduzir movimento** (`prefers-reduced-motion`) vê o texto direto, sem animação.
+- A parte sem DOM (quadros do embaralhamento e a máscara) é pura e testada: `crypto/scramble.mjs` e `maskMoney` em `crypto/amount.mjs`.
+
 ## Pré-visualização
 `mix phx.server` em `apps/brdc_web` e abra `http://localhost:4000/`: mostra a tela **Início** e a tela **Enviar** com dados de exemplo (nada é real).

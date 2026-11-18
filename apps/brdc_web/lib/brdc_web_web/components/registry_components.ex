@@ -162,6 +162,7 @@ defmodule BrdcWebWeb.RegistryComponents do
           <input
             type="text"
             data-role="price"
+            data-money
             inputmode="decimal"
             autocomplete="off"
             placeholder="0,00"

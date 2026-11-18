@@ -2,6 +2,7 @@
 // texto claro o que será assinado. O servidor só fornece dados públicos (rede, nonce, saldo, taxa) e repassa
 // a transação pronta ao nó.
 import { getSession } from "./wallet_state.js";
+import { signingLabel } from "./ui_effects.js";
 import { decodeAddress } from "./crypto/wallet.mjs";
 import { parseAmount, formatAmount, formatFull } from "./crypto/amount.mjs";
 import { buildTransfer } from "./crypto/send.mjs";
@@ -96,10 +97,12 @@ export const Send = {
 
   async confirm() {
     if (!this.draft) return;
+    const restore = signingLabel(this.el);
     this.busy(true);
     try {
       const signed = await signTx(this.draft.tx, getSession().account());
       this.pushEvent("wallet:submit", { tx: hex(encodeTx(signed)) }, (reply) => {
+        restore();
         this.busy(false);
         if (!reply?.ok) return this.error(ERRORS[reply?.error] ?? "A rede recusou a transação.");
         this.q("[data-role='txid']").textContent = reply.id;
@@ -108,6 +111,7 @@ export const Send = {
         this.step("done");
       });
     } catch {
+      restore();
       this.busy(false);
       this.error("Não foi possível assinar: a carteira pode ter bloqueado.");
     }

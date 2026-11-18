@@ -2,6 +2,7 @@
 // públicos (credenciais, tipos, propostas com as aprovações); aqui o navegador desenha, mostra por extenso o que
 // será assinado, assina com a chave não extraível e envia. Tudo com textContent (nunca HTML).
 import { getSession } from "./wallet_state.js";
+import { signingLabel } from "./ui_effects.js";
 import { formatFull } from "./crypto/amount.mjs";
 import { signTx, encodeTx } from "./crypto/tx.mjs";
 import { hex, unhex, utf8, fromUtf8 } from "./crypto/bytes.mjs";
@@ -102,15 +103,18 @@ export const Base = {
     });
   },
   async signAndSend(tx, onDone) {
+    const restore = signingLabel(this.el);
     this.busy(true);
     try {
       const signed = await signTx(tx, getSession().account());
       this.pushEvent("wallet:submit", { tx: hex(encodeTx(signed)) }, (reply) => {
+        restore();
         this.busy(false);
         if (!reply?.ok) return this.error(ERRORS[reply?.error] ?? "A rede recusou a transação.");
         onDone(reply.id);
       });
     } catch {
+      restore();
       this.busy(false);
       this.error("Não foi possível assinar: a carteira pode ter bloqueado.");
     }
@@ -532,7 +536,11 @@ export const Organ = {
     this.q("[data-role='confirm-label']").textContent = confirmText;
     const box = this.q("[data-role='review-lines']");
     box.textContent = "";
-    for (const l of lines) box.appendChild(el("p", "", l));
+    for (const l of lines) {
+      const p = el("p", "", l);
+      p.dataset.decrypt = ""; // cada linha da revisão se revela
+      box.appendChild(p);
+    }
     this.draft = { run };
     this.step("review");
   },
@@ -543,10 +551,12 @@ export const Organ = {
       if (!r) return this.error("Os dados do bem mudaram; esta proposta caducou.");
       const lines = [...r.lines, `Rede: ${info.chain_id}`, `Assinaturas já dadas: ${p.approvals.length} de ${p.threshold}`];
       this.showReview("Confira antes de assinar", "Assinar como membro do órgão", lines, async () => {
+        const restore = signingLabel(this.el, "Assinando…");
         this.busy(true);
         try {
           const approval = await approve(account, r.doc);
           this.pushEvent("org:approve", { id: p.id, approval: hex(approval) }, (reply) => {
+            restore();
             this.busy(false);
             if (!reply?.ok) return this.error(ERRORS[reply?.error] ?? "A rede recusou a assinatura.");
             this.q("[data-role='done-title']").textContent = "Assinatura enviada";
@@ -554,6 +564,7 @@ export const Organ = {
             this.step("done");
           });
         } catch {
+          restore();
           this.busy(false);
           this.error("Não foi possível assinar: a carteira pode ter bloqueado.");
         }

@@ -34,6 +34,7 @@ defmodule BrdcWebWeb.SendComponents do
             type="text"
             inputmode="decimal"
             data-role="amount"
+            data-money
             autocomplete="off"
             placeholder="0,00"
             class="brdc-input mt-1 text-xl"
@@ -49,6 +50,7 @@ defmodule BrdcWebWeb.SendComponents do
           <div>
             <dt class="text-[var(--brdc-muted)]">Você envia</dt><dd
               data-role="r-amount"
+              data-decrypt
               class="text-2xl font-bold"
             >
             </dd>
@@ -56,16 +58,19 @@ defmodule BrdcWebWeb.SendComponents do
           <div>
             <dt class="text-[var(--brdc-muted)]">Para</dt><dd
               data-role="r-to"
+              data-decrypt
               class="break-all font-mono text-xs"
             >
             </dd>
           </div>
           <div>
-            <dt class="text-[var(--brdc-muted)]">Taxa da rede</dt><dd data-role="r-fee"></dd>
+            <dt class="text-[var(--brdc-muted)]">Taxa da rede</dt><dd data-role="r-fee" data-decrypt>
+            </dd>
           </div>
           <div>
             <dt class="text-[var(--brdc-muted)]">Total debitado</dt><dd
               data-role="r-total"
+              data-decrypt
               class="font-semibold"
             >
             </dd>

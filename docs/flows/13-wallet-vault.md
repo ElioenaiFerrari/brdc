@@ -19,7 +19,7 @@ Diagrama deste fluxo: **a gerar** (o dono adiou a revisão dos diagramas). O flu
 4. O cofre é criado: PBKDF2-HMAC-SHA256 com **600.000 voltas** e sal aleatório derivam uma chave AES-256; o **AES-GCM** cifra `{frase, endereço de criação, usa passphrase?}` com os parâmetros como dado autenticado.
 5. O registro (`v`, `kdf`, `iv`, `data`, tudo em hexadecimal) vai para o **IndexedDB**. A tela é limpa (`wipe`) e o endereço vai ao servidor.
 
-**Importar:** igual, a partir de uma frase existente (validada pelo checksum do BIP-39).
+**Importar:** igual, a partir de uma frase existente (validada pelo checksum do BIP-39). **Antes de gravar o cofre, a tela mostra o endereço que sai da frase e da passphrase digitadas** ("Confira o endereço") e pergunta se é o esperado: **passphrase errada ou esquecida gera outra carteira válida e vazia, sem nenhum erro** (é assim que o BIP-39 funciona), então o endereço é a única prova. "É este: importar" grava; "Voltar e corrigir" volta com os campos preservados e apaga o endereço da tela.
 
 **Destravar**
 1. Senha local (e a passphrase, se usa) digitadas na hora. O cofre recusa registros com **menos de 600.000 voltas** (rebaixamento) ou valores absurdos.
@@ -46,10 +46,12 @@ Diagrama deste fluxo: **a gerar** (o dono adiou a revisão dos diagramas). O flu
 `apps/brdc_web/assets/js/crypto/vault.mjs` (cofre), `store.mjs` (IndexedDB e memória), `session.mjs` (sessão e bloqueio), `assets/js/vault_hook.js` (telas), `lib/brdc_web_web/components/vault_components.ex` (marcação), `lib/brdc_web_web/live/wallet_live.ex` (servidor).
 
 ## Testes que cobrem
-`vault.test.mjs` (12): senha, 600 mil voltas, cifra sem texto à vista, adulteração de cada campo, rebaixamento, armazenamento, sessão, passphrase não guardada, bloqueio por inatividade. `wallet_live_test.exs` (6): sem campos ligados ao LiveView, só endereço, endereço inválido, parâmetros inesperados, CSP. **Verificado à mão no Chrome 153** (criar com validações, IndexedDB sem texto à vista, servidor recebe só o endereço, bloquear, recarregar, senha errada, passphrase diferente, destravar).
+**Importar com confirmação do endereço: verificado à mão no Chrome** (passphrase `wrong` mostra um endereço; "Voltar e corrigir" preserva a frase e apaga o endereço; com a passphrase certa o endereço é exatamente o da carteira original; "É este: importar" abre a carteira com o saldo). `vault.test.mjs` (12): senha, 600 mil voltas, cifra sem texto à vista, adulteração de cada campo, rebaixamento, armazenamento, sessão, passphrase não guardada, bloqueio por inatividade. `wallet_live_test.exs` (6): sem campos ligados ao LiveView, só endereço, endereço inválido, parâmetros inesperados, CSP. **Verificado à mão no Chrome 153** (criar com validações, IndexedDB sem texto à vista, servidor recebe só o endereço, bloquear, recarregar, senha errada, passphrase diferente, destravar).
 
 ## Limites honestos
 - O IndexedDB e o hook de interface **não têm teste automatizado** (precisam de navegador): a verificação foi manual.
 - A senha local é a única proteção do cofre em repouso; sem Argon2id ([ADR-0020](../adr/0020-browser-crypto-webcrypto-without-dependencies.md)).
-- A passphrase só tem o aviso de "outra carteira" depois de a senha abrir o cofre.
+- A passphrase só tem o aviso de "outra carteira" depois de a senha abrir o cofre. **Na importação** o aviso é a tela de confirmação do endereço: a pessoa precisa ter o endereço anotado para conferir; sem ele, não há como saber.
+- **A carteira trava ao ficar oculta** (`visibilitychange`). Num Chrome automatizado em que a aba alterna entre oculta e visível a cada segundo, ela abre e trava logo em seguida; nos testes à mão isso foi contornado só dentro da página de teste (a leitura de `document.hidden`), sem mudar o código.
+- Enquanto a chave é derivada (cerca de 1 s), o botão mostra "Descriptografando…" (ou "Criptografando…") com o efeito de carregamento.
 - Ainda **não há** saldo real, envio nem as telas de bens, credenciais e contratos (próximos passos).

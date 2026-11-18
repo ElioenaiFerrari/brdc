@@ -18,7 +18,13 @@ defmodule BrdcWebWeb.VaultComponents do
       class="brdc-card space-y-5 p-6"
     >
       <div data-view="loading">
-        <p class="text-[var(--brdc-muted)]">Abrindo a carteira…</p>
+        <p
+          class="text-[var(--brdc-muted)]"
+          data-scramble-loading
+          data-loading-text="Abrindo a carteira…"
+        >
+          Abrindo a carteira…
+        </p>
       </div>
 
       <div data-view="unsupported" hidden class="space-y-3">
@@ -152,6 +158,26 @@ defmodule BrdcWebWeb.VaultComponents do
         <button type="button" data-action="import-submit" class="brdc-btn-primary">Importar</button>
         <button type="button" data-action="back" class="brdc-btn-ghost w-full">Voltar</button>
       </form>
+
+      <div data-view="import-confirm" hidden class="space-y-4">
+        <h2 class="text-xl font-bold">Confira o endereço</h2>
+        <p class="text-sm text-[var(--brdc-muted)]">
+          Esta é a carteira que sai da frase e da passphrase que você digitou:
+        </p>
+        <p data-role="import-address" data-decrypt class="brdc-inset break-all p-4 font-mono text-sm">
+        </p>
+        <p class="brdc-warn">
+          É o endereço que você esperava? Se a passphrase (a 25ª palavra) estiver errada ou esquecida, sai <strong>outra carteira, vazia</strong>, e não a sua. Nada avisa disso: confira com o endereço que você tem
+          anotado.
+        </p>
+        <p data-role="error" hidden role="alert" class="brdc-alert"></p>
+        <button type="button" data-action="import-confirm" class="brdc-btn-primary">
+          É este: importar
+        </button>
+        <button type="button" data-action="import-back" class="brdc-btn-ghost w-full">
+          Voltar e corrigir
+        </button>
+      </div>
 
       <form data-view="unlock" hidden class="space-y-4" autocomplete="off">
         <h2 class="text-xl font-bold">Destravar</h2>

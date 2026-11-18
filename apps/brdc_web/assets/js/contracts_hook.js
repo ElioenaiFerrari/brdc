@@ -2,6 +2,7 @@
 // o que cada ação faz com o dinheiro, MOSTRA em texto claro, assina com a chave não extraível e envia só a
 // transação pronta. Tudo com textContent (nunca HTML).
 import { getSession } from "./wallet_state.js";
+import { signingLabel } from "./ui_effects.js";
 import { UI, TYPE_FACTOR } from "./contracts_ui.js";
 import { TEMPLATES, KIND_CREATE, KIND_ACT, createPayload, actPayload, buildContractTx, availableActions, creationLines } from "./crypto/contracts.mjs";
 import { decodeAddress } from "./crypto/wallet.mjs";
@@ -165,6 +166,7 @@ export const Contracts = {
       input.inputMode = t.type === "brdc" ? "decimal" : "numeric";
       input.autocomplete = "off";
       input.dataset.term = name;
+      if (t.type === "brdc") input.dataset.money = ""; // máscara de dinheiro (1.234,56)
       label.appendChild(input);
       box.appendChild(label);
     }
@@ -281,16 +283,19 @@ export const Contracts = {
 
   async confirm() {
     if (!this.draft) return;
+    const restore = signingLabel(this.el);
     this.busy(true);
     try {
       const signed = await signTx(this.draft.tx, getSession().account());
       this.pushEvent("wallet:submit", { tx: hex(encodeTx(signed)) }, (reply) => {
+        restore();
         this.busy(false);
         if (!reply?.ok) return this.error(ERRORS[reply?.error] ?? "A rede recusou a transação.");
         this.q("[data-role='txid']").textContent = reply.id;
         this.step("done");
       });
     } catch {
+      restore();
       this.busy(false);
       this.error("Não foi possível assinar: a carteira pode ter bloqueado.");
     }

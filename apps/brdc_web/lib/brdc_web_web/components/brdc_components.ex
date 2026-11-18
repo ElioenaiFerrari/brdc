@@ -17,6 +17,7 @@ defmodule BrdcWebWeb.BrdcComponents do
   attr :units, :integer, required: true, doc: "valor em unidades mínimas (1 BRDC = 1.000.000)"
   attr :class, :string, default: "text-4xl"
   attr :unit, :string, default: nil, doc: "sufixo, ex.: BRDC"
+  attr :decrypt, :boolean, default: false, doc: "revela o número com o efeito de letras ao mudar"
 
   def amount(assigns) do
     {whole, cents} = Amount.split(assigns.units)
@@ -24,7 +25,7 @@ defmodule BrdcWebWeb.BrdcComponents do
 
     ~H"""
     <span class={["brdc-amount", @class]}>
-      {@whole}<span class="brdc-dim">,{@cents}</span>
+      <span data-decrypt={@decrypt}>{@whole}</span><span class="brdc-dim" data-decrypt={@decrypt}>,{@cents}</span>
       <span :if={@unit} class="brdc-dim ml-1 text-[0.45em] font-semibold">{@unit}</span>
     </span>
     """

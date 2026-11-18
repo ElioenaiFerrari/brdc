@@ -29,6 +29,7 @@ import {Send} from "./send_hook"
 import {Contracts} from "./contracts_hook"
 import {Credentials, Organ} from "./registry_hook"
 import {Assets} from "./assets_hook"
+import {installUiEffects} from "./ui_effects"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
@@ -44,6 +45,7 @@ window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 
 // connect if there are any LiveViews on the page
 liveSocket.connect()
+installUiEffects()
 
 // expose liveSocket on window for web console debug logs and latency simulation:
 // >> liveSocket.enableDebug()

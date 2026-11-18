@@ -7,8 +7,10 @@ import { passwordProblems } from "./crypto/vault.mjs";
 import { isValidMnemonic } from "./crypto/bip39.mjs";
 import { setSession } from "./wallet_state.js";
 import { hex } from "./crypto/bytes.mjs";
+import { deriveAccount } from "./crypto/wallet.mjs";
+import { loadingLabel } from "./ui_effects.js";
 
-const VIEWS = ["loading", "welcome", "create-words", "create-confirm", "create-secure", "import", "unlock", "unsupported"];
+const VIEWS = ["loading", "welcome", "create-words", "create-confirm", "create-secure", "import", "import-confirm", "unlock", "unsupported"];
 
 export const Vault = {
   async mounted() {
@@ -83,7 +85,9 @@ export const Vault = {
     for (const i of this.qa("input[type='password'], input[type='text'], textarea")) i.value = "";
     for (const w of this.qa("[data-role='words']")) w.textContent = "";
     for (const c of this.qa("[data-role='confirm-fields']")) c.textContent = "";
+    for (const a of this.qa("[data-role='import-address']")) a.textContent = "";
     this.pending.mnemonic = null;
+    this.importDraft = null;
   },
 
   announce() {
@@ -166,7 +170,7 @@ export const Vault = {
       const problems = passwordProblems(pw);
       if (problems.length) return this.setError(`Senha local: ${problems.join("; ")}.`, view);
       if (pw !== pw2) return this.setError("As senhas não são iguais.", view);
-      await this.finish(() => this.session.create({ mnemonic: this.pending.mnemonic, passphrase, password: pw }), view);
+      await this.finish(() => this.session.create({ mnemonic: this.pending.mnemonic, passphrase, password: pw }), view, "create-submit", "Criptografando…");
     });
 
     this.on("start-import", () => this.show("import"));
@@ -181,7 +185,28 @@ export const Vault = {
       const problems = passwordProblems(pw);
       if (problems.length) return this.setError(`Senha local: ${problems.join("; ")}.`, view);
       if (pw !== pw2) return this.setError("As senhas não são iguais.", view);
-      await this.finish(() => this.session.create({ mnemonic, passphrase, password: pw }), view);
+      // antes de gravar, mostra o endereço que sai disto: passphrase errada dá OUTRA carteira (vazia), sem aviso
+      let account;
+      try {
+        account = await deriveAccount(mnemonic, passphrase);
+      } catch {
+        return this.setError("Não foi possível derivar a conta desta frase.", view);
+      }
+      this.importDraft = { mnemonic, passphrase, pw };
+      this.q("[data-role='import-address']").textContent = account.address;
+      this.show("import-confirm");
+    });
+
+    this.on("import-confirm", async () => {
+      const d = this.importDraft;
+      if (!d) return this.show("import");
+      await this.finish(() => this.session.create({ mnemonic: d.mnemonic, passphrase: d.passphrase, password: d.pw }), "import-confirm", "import-confirm", "Criptografando…");
+      this.importDraft = null;
+    });
+    this.on("import-back", () => {
+      this.importDraft = null;
+      this.q("[data-role='import-address']").textContent = "";
+      this.show("import");
     });
 
     this.on("unlock-submit", async () => {
@@ -189,6 +214,7 @@ export const Vault = {
       const scope = "[data-view='unlock'] ";
       const pw = this.q(scope + "[data-role='password']").value;
       const passphrase = this.q(scope + "[data-role='passphrase']").value;
+      const restore = loadingLabel(this.q("[data-action='unlock-submit']"), "Descriptografando…");
       this.setBusy(true);
       try {
         const r = await this.session.unlock({ password: pw, passphrase });
@@ -201,6 +227,7 @@ export const Vault = {
       } catch (e) {
         this.setError(e?.name === "VaultError" ? "Senha incorreta." : "Não foi possível destravar.", view);
       } finally {
+        restore();
         this.setBusy(false);
       }
     });
@@ -223,7 +250,8 @@ export const Vault = {
     });
   },
 
-  async finish(action, view) {
+  async finish(action, view, button, label) {
+    const restore = button ? loadingLabel(this.q(`[data-action='${button}']`), label) : () => {};
     this.setBusy(true);
     try {
       await action();
@@ -231,6 +259,7 @@ export const Vault = {
     } catch (e) {
       this.setError(e?.message ?? "Não foi possível concluir.", view);
     } finally {
+      restore();
       this.setBusy(false);
     }
   },

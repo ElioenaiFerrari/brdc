@@ -237,7 +237,7 @@ defmodule BrdcWebWeb.WalletLive do
           <div class="brdc-card-glow p-6">
             <p class="text-sm text-[var(--brdc-muted)]">Saldo</p>
             <p class="mt-2">
-              <.amount units={(@chain && @chain.balance) || 0} class="text-5xl" unit="BRDC" />
+              <.amount units={(@chain && @chain.balance) || 0} class="text-5xl" unit="BRDC" decrypt />
             </p>
             <p
               :if={@chain && @chain.pending_balance != @chain.balance}
@@ -248,10 +248,13 @@ defmodule BrdcWebWeb.WalletLive do
             <div class="mt-4 flex flex-wrap gap-2">
               <.chip tone={:yellow} icon="hero-scale">1 BRDC = R$ 1,00</.chip>
               <.chip :if={@chain} tone={:green} icon="hero-signal">
-                {@chain.chain_id} · bloco {@chain.height}
+                <span data-decrypt>{@chain.chain_id} · bloco {@chain.height}</span>
               </.chip>
               <.chip :if={!@chain} icon="hero-signal-slash">
-                {if @offline, do: "Sem conexão com a rede", else: "Conectando…"}
+                <span :if={@offline}>Sem conexão com a rede</span>
+                <span :if={!@offline} data-scramble-loading data-loading-text="Conectando à rede…">
+                  Conectando à rede…
+                </span>
               </.chip>
             </div>
           </div>
@@ -261,7 +264,7 @@ defmodule BrdcWebWeb.WalletLive do
               <h2 class="text-lg font-bold">Seu endereço</h2>
               <.chip tone={:green} icon="hero-lock-open">Destravada</.chip>
             </div>
-            <p id="my-address" class="mt-3 break-all font-mono text-sm">{@address}</p>
+            <p id="my-address" data-decrypt class="mt-3 break-all font-mono text-sm">{@address}</p>
             <p class="mt-2 text-xs text-[var(--brdc-muted)]">
               Pode compartilhar este endereço para receber BRDC. Ele não revela sua frase.
             </p>

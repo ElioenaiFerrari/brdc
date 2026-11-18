@@ -131,7 +131,9 @@ export const Assets = {
       for (const [text, title] of lines) {
         const row = el("div");
         row.appendChild(el("p", "text-[var(--brdc-muted)]", title));
-        row.appendChild(el("p", "font-semibold", text));
+        const value = el("p", "font-semibold", text);
+        value.dataset.decrypt = ""; // o valor se revela
+        row.appendChild(value);
         box.appendChild(row);
       }
       const extraRows = [["Taxa da rede", `${this.fmt(fee)} BRDC`], ["Rede", info.chain_id]];
