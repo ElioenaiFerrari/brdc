@@ -22,6 +22,7 @@ defmodule BrdcDev.Compose do
           wallet_memory: String.t(),
           base_port: pos_integer(),
           wallet_port: pos_integer(),
+          interval_ms: pos_integer(),
           context: Path.t()
         }
 
@@ -56,6 +57,7 @@ defmodule BrdcDev.Compose do
       wallet_memory: "256m",
       base_port: 4700,
       wallet_port: 4100,
+      interval_ms: 1_000,
       context: @repo_root
     }
   end
@@ -146,6 +148,7 @@ defmodule BrdcDev.Compose do
         environment:
           <<: *env
           BRDC_ROLE: validator
+          BRDC_INTERVAL_MS: "#{o.interval_ms}"
           BRDC_PEER_PORT: "#{@peer_port}"
           BRDC_PUBLIC_PORT: "#{@public_port}"
         volumes:

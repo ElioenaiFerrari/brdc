@@ -46,6 +46,15 @@ defmodule BrdcDev.ComposeTest do
     assert s["wallet1"] =~ "mem_limit: 300m"
   end
 
+  test "o intervalo de bloco dos validadores é configurável (padrão 1 s) e vai no ambiente" do
+    padrao = Compose.render(Compose.defaults())
+    assert padrao =~ ~s(BRDC_INTERVAL_MS: "1000")
+
+    rapido = Compose.render(%{Compose.defaults() | interval_ms: 200})
+    assert rapido =~ ~s(BRDC_INTERVAL_MS: "200")
+    refute rapido =~ ~s(BRDC_INTERVAL_MS: "1000")
+  end
+
   test "portas só em 127.0.0.1, e a porta de pares (4600) nunca é publicada" do
     yaml = Compose.render(Compose.defaults())
     ports = Regex.scan(~r/ports: \["([^"]+)"\]/, yaml) |> Enum.map(&Enum.at(&1, 1))

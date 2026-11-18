@@ -17,6 +17,7 @@ Diagrama deste fluxo: **a gerar** (diagramas adiados a pedido do dono).
 ## Passo a passo
 ```
 mix brdc.compose.init            # chaves de teste, gênese, docker-compose.yml, .env (pasta compose/, ignorada pelo git)
+mix brdc.compose.init --interval 200ms   # (opcional) espera do validador depois da primeira transação para agrupar a rajada no bloco; padrão 1s (`BRDC_INTERVAL_MS`)
 mix brdc.compose.up              # build da imagem (1ª vez demora), sobe tudo e espera os validadores
 mix brdc.compose.status          # por validador: altura, pares, motor de consenso, evidências, pendentes
 mix brdc.compose.down [--volumes]

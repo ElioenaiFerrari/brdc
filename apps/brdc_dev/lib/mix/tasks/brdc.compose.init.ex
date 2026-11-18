@@ -6,7 +6,8 @@ defmodule Mix.Tasks.Brdc.Compose.Init do
   `lab.json`. Nunca sobrescreve chaves nem gênese.
 
       mix brdc.compose.init [--validators 4] [--wallets 2] [--cpus 0.5] [--memory 384m]
-                            [--wallet-memory 256m] [--base-port 4700] [--wallet-port 4100] [--dir compose]
+                            [--wallet-memory 256m] [--base-port 4700] [--wallet-port 4100] [--interval 1s]
+                            [--dir compose]
 
   Orçamento padrão: 4 validadores e 2 carteiras = **3 CPUs e 2,0 GB no máximo**. As portas ficam só em
   `127.0.0.1` e são diferentes das da rede local (`4545` e `4000`). O número de validadores é decidido aqui e não
@@ -23,6 +24,7 @@ defmodule Mix.Tasks.Brdc.Compose.Init do
     wallet_memory: :string,
     base_port: :integer,
     wallet_port: :integer,
+    interval: :string,
     dir: :string
   ]
 
@@ -34,7 +36,7 @@ defmodule Mix.Tasks.Brdc.Compose.Init do
     Mix.Task.run("app.config")
 
     dir = opts[:dir] || Compose.default_dir()
-    overrides = opts |> Keyword.delete(:dir) |> validate!()
+    overrides = opts |> Keyword.delete(:dir) |> validate!() |> interval_option()
 
     case Compose.init(dir, overrides) do
       {:ok, o} ->
@@ -72,6 +74,25 @@ defmodule Mix.Tasks.Brdc.Compose.Init do
     for key <- [:memory, :wallet_memory], do: memory!(opts[key], key)
     cpus!(opts[:cpus])
     opts
+  end
+
+  # `--interval 200ms|1s` vira `interval_ms` (a espera, depois da primeira transação, para agrupar a rajada no bloco;
+  # padrão 1 s). Vai para `BRDC_INTERVAL_MS` de cada validador.
+  defp interval_option(opts) do
+    case Keyword.pop(opts, :interval) do
+      {nil, rest} ->
+        rest
+
+      {text, rest} ->
+        ms =
+          case Integer.parse(text) do
+            {n, "ms"} when n > 0 -> n
+            {n, "s"} when n > 0 -> n * 1_000
+            _ -> Mix.raise("--interval inválido: #{text} (exemplos: 200ms, 1s)")
+          end
+
+        Keyword.put(rest, :interval_ms, ms)
+    end
   end
 
   defp check!(nil, _range, _name), do: :ok
