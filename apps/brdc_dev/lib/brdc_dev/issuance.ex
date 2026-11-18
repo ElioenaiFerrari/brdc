@@ -8,7 +8,7 @@ defmodule BrdcDev.Issuance do
   **informa** a cobertura (reserva atestada contra o que circula), não prova a reserva e não congela nada.
   """
   alias BrdcCrypto.{Address, Ed25519}
-  alias BrdcDev.Chain
+  alias BrdcDev.{Chain, Devnet}
   alias BrdcLedger.Tx
   alias BrdcNode.Client
 
@@ -69,7 +69,7 @@ defmodule BrdcDev.Issuance do
 
   # quem envia mint e atestado é o emissor i1 (o ledger confere as aprovações, não o remetente)
   defp sender(endpoint, devnet, kind, payload) do
-    seed = Map.fetch!(devnet.seeds, "i1")
+    seed = Devnet.seed!(devnet, "i1")
 
     with {:ok, sent} <- Chain.send_tx(endpoint, seed, kind, payload, 0) do
       {:ok, Map.put(sent, :sender, Address.hash(Ed25519.public_key(seed)))}
@@ -77,5 +77,5 @@ defmodule BrdcDev.Issuance do
   end
 
   defp approvals(devnet, doc, roles),
-    do: for(role <- roles, do: Tx.approval(doc, Map.fetch!(devnet.seeds, role)))
+    do: for(role <- roles, do: Tx.approval(doc, Devnet.seed!(devnet, role)))
 end

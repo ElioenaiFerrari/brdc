@@ -37,7 +37,7 @@ Página `/explorer` (LiveView, só leitura) falando com o nó pela porta públic
 ### M5 · Ferramentas — **em andamento** (tudo por `mix`, sem `Makefile`; rede de teste `devnet.init|up|down|status|logs|kill|reset` e `brdc.node` prontos, ver [NETWORKS](NETWORKS.md))
 Catálogo de `mix brdc.*` do `brdc_dev` (init/up/down/status/reset/logs, wallet.new, send, blocks, explorer), **simuladores** (blocos sob demanda, equivocação, rotação de validadores) e `mix brdc.docs.check` com exemplos executáveis. Só dev, nunca em release.
 
-### M6 · Roteiro de dois computadores
+### M6 · Roteiro de dois computadores — **pronto e ensaiado em uma máquina** ([fluxo 21](flows/21-two-computers.md)); falta rodar em dois computadores de verdade
 Geração de chaves e gênese (`brdc.keygen` e `brdc.genesis` já existem), troca dos arquivos públicos, subida em duas máquinas, envio e consulta cruzados. Fica **escrito, ensaiado e anotado** em `docs/NETWORKS.md`; validado à mão (a rede entre máquinas não tem teste automático equivalente, dito honestamente no doc).
 
 ### M7 · Revisão geral final (você pediu)

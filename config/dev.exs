@@ -48,8 +48,16 @@ config :brdc_web, dev_routes: true
 # Nó local de desenvolvimento (BrdcDev): um validador, porta pública em TCP. A carteira fala com ele por TCP.
 # A porta do nó pode ser trocada com BRDC_NODE_PORT (para rodar duas instâncias na mesma máquina).
 node_port = String.to_integer(System.get_env("BRDC_NODE_PORT", "4545"))
-config :brdc_dev, devnet: true, port: node_port, interval_ms: 1_000
-config :brdc_web, :node, host: ~c"127.0.0.1", port: node_port
+
+# com BRDC_NODE_HOST a carteira usa o nó de outro computador: nada de nó solo embutido (a porta pode ser de um validador)
+config :brdc_dev,
+  devnet: System.get_env("BRDC_NODE_HOST") == nil,
+  port: node_port,
+  interval_ms: 1_000
+
+# BRDC_NODE_HOST: a carteira e o explorador podem falar com um nó de OUTRO computador (rede de teste entre máquinas)
+node_host = String.to_charlist(System.get_env("BRDC_NODE_HOST", "127.0.0.1"))
+config :brdc_web, :node, host: node_host, port: node_port
 
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"

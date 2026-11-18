@@ -1,6 +1,6 @@
 # Redes
 
-> **Estado:** a **devnet de um validador** roda (`mix phx.server`, com disco). A **rede de vários validadores** (BFT por P2P, com disco e diário) está pronta e testada com 4 validadores em TLS real na mesma máquina ([fluxo 18](flows/18-validator-network.md)); as ferramentas para subir vários nós já existem (`mix brdc.devnet.*`, abaixo); falta o **roteiro de dois computadores** (M6).
+> **Estado:** a **devnet de um validador** roda (`mix phx.server`, com disco). A **rede de vários validadores** (BFT por P2P, com disco e diário) está pronta e testada com 4 validadores em TLS real na mesma máquina ([fluxo 18](flows/18-validator-network.md)); as ferramentas para subir vários nós já existem (`mix brdc.devnet.*`, abaixo); o **roteiro de dois computadores** está escrito e **ensaiado em uma só máquina** ([fluxo 21](flows/21-two-computers.md)); falta rodá-lo em dois computadores de verdade.
 
 ## Perfis
 | Rede | Para quê | Estado |
@@ -17,6 +17,9 @@
 
 ## Decisões pendentes que afetam as redes
 Tempo de bloco, quem são os validadores iniciais e como o conjunto muda (rotação): ver [ADRs pendentes](adr/README.md).
+
+## Rede de teste em dois computadores
+Cada computador gera as suas chaves (`mix brdc.keygen`), os dois trocam só os `.pub`, um monta a gênese (`mix brdc.genesis … --peer v1=IP:porta …`) e copia o `genesis.json`, e cada um sobe os seus validadores com `mix brdc.validator --genesis … --seed … --data … --peer-port … --public-port …`. As ferramentas consultam outro computador com `--host IP`, e a carteira com `BRDC_NODE_HOST`. O passo a passo completo, o que foi ensaiado e o que ainda não foi está no **[fluxo 21](flows/21-two-computers.md)**.
 
 ## Subir a rede de teste local (vários validadores, tudo por `mix`)
 ```

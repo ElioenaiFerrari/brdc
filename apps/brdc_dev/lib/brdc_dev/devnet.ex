@@ -19,16 +19,54 @@ defmodule BrdcDev.Devnet do
   @doc """
   Garante chaves e gênese em `dir` e devolve tudo carregado. Com `validators: n` (só vale se a gênese ainda não
   existe) cria `n` validadores; com a gênese já criada, vale o número que ela tem.
+
+  **Com a gênese já criada, nada é gerado:** carrega só as sementes que existem na pasta. Isso importa numa rede
+  montada por arquivos entre computadores, onde cada máquina tem só as suas sementes (as dos outros validadores
+  são apenas `.pub`): gerar uma semente nova em silêncio não bateria com a gênese. Quem precisa de uma semente
+  que falta recebe um erro claro (`seed!/2`).
   """
   @spec ensure(Path.t(), keyword()) :: {:ok, t()} | {:error, term()}
   def ensure(dir \\ default_dir(), opts \\ []) do
-    n = existing_validators(dir) || Keyword.get(opts, :validators, 1)
+    case existing_validators(dir) do
+      nil -> create(dir, Keyword.get(opts, :validators, 1))
+      n -> load_existing(dir, n)
+    end
+  end
+
+  defp create(dir, n) do
     roles = validator_roles(n) ++ @fixed_roles
 
     with :ok <- ensure_keys(dir, roles),
          {:ok, seeds} <- load_seeds(dir, roles),
          {:ok, genesis} <- ensure_genesis(dir, n) do
       {:ok, %{genesis: genesis, dir: dir, seeds: seeds}}
+    end
+  end
+
+  defp load_existing(dir, n) do
+    roles =
+      Enum.filter(
+        validator_roles(n) ++ @fixed_roles,
+        &File.exists?(Path.join(dir, &1 <> ".seed"))
+      )
+
+    with {:ok, seeds} <- load_seeds(dir, roles),
+         {:ok, genesis} <- ensure_genesis(dir, n) do
+      {:ok, %{genesis: genesis, dir: dir, seeds: seeds}}
+    end
+  end
+
+  @doc "A semente do papel `role`, ou um erro que diz o que fazer se esta máquina não a tem."
+  @spec seed!(t(), String.t()) :: <<_::256>>
+  def seed!(%{seeds: seeds, dir: dir}, role) do
+    case Map.fetch(seeds, role) do
+      {:ok, seed} ->
+        seed
+
+      :error ->
+        raise ArgumentError,
+              "esta máquina não tem #{role}.seed em #{dir}: quem assina como #{role} precisa rodar este comando " <>
+                "(a semente nunca é copiada entre computadores)"
     end
   end
 

@@ -145,6 +145,14 @@ Invariante → teste que o cobre. Linhas *planejadas* ainda não têm teste: ent
 | Oferta, aceite, cancelamento e finalização no JS têm cargas **iguais** às do Elixir | `assets/js/crypto/assets.test.mjs` + `vectors/tx.json` |
 | Ciclo pela rede: classe, registro, oferta, escrow, finalização depois da janela (relógio) | `apps/brdc_dev/test/brdc_dev/devnet_e2e_test.exs` |
 
+## Rede entre computadores (M6, pronta)
+| Invariante | Teste |
+|---|---|
+| Rede montada só por arquivos (chaves, gênese, sementes): 4 validadores conectam, a transação vira o mesmo bloco nos 4 e o certificado fecha contra as chaves fixadas da gênese | `apps/brdc_node/test/brdc_node/validator_test.exs` |
+| Chave fora da gênese não sobe; arquivos ausentes e semente com permissão aberta dão erro claro | `validator_test.exs` |
+| Com gênese existente, as ferramentas não geram sementes (não bateriam); semente faltando dá mensagem clara | `apps/brdc_dev/test/brdc_dev/devnet_files_test.exs` |
+| **Ensaiado à mão** (duas pastas, 4 processos reais): hash da gênese igual, emissão e envio vistos dos dois lados, queda do computador B para a rede sem bifurcar e retoma, gênese com outro `chain-id` fica isolada | (manual, fluxo 21; **não** foi testado entre dois computadores de verdade) |
+
 ## Explorador (M4, pronto)
 | Invariante | Teste |
 |---|---|

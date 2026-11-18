@@ -38,6 +38,7 @@ Um fluxo por funcionalidade (texto e diagrama) em `docs/flows/`, à medida que c
 - [18 — Rede de vários validadores](flows/18-validator-network.md) (Fase 7)
 - [19 — Produção da moeda (simulada): lastro, emissão, resgate](flows/19-coin-issuance-simulation.md) (Fase 7)
 - [20 — Explorador: blocos, transações e contas, inclusive o que está em andamento](flows/20-explorer.md) (Fase 7)
+- [21 — Rede de teste em dois computadores](flows/21-two-computers.md) (Fase 7)
 
 A [arquitetura](ARCHITECTURE.md) dá a visão geral.
 

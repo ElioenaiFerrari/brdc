@@ -6,7 +6,7 @@ defmodule BrdcDev.Cli do
   alias BrdcDev.{Net, Wallets}
   alias BrdcLedger.Amount
 
-  @common [port: :integer, dir: :string]
+  @common [port: :integer, dir: :string, host: :string]
 
   @doc "Opções comuns que toda tarefa de cliente aceita."
   @spec common() :: keyword()

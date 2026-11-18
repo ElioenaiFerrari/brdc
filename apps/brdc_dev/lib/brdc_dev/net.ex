@@ -73,13 +73,15 @@ defmodule BrdcDev.Net do
   def peer_port(cfg, i), do: cfg.peer_base + i - 1
 
   @doc """
-  Endpoint do nó para as ferramentas de cliente: `--port` se vier, senão o validador 1 da rede gerenciada
-  (`net/devnet.json`), senão a porta padrão 4545.
+  Endpoint do nó para as ferramentas de cliente: `--host` (padrão `127.0.0.1`; use o IP de outro computador para
+  consultar a rede dele) e `--port` se vier, senão o validador 1 da rede gerenciada (`net/devnet.json`), senão a
+  porta padrão 4545.
   """
   @spec client_endpoint(keyword()) :: {charlist(), pos_integer()}
   def client_endpoint(opts) do
     cfg = opts |> dir() |> read_config()
-    {~c"127.0.0.1", opts[:port] || (cfg && cfg.public_base) || @default_public}
+    host = if opts[:host], do: String.to_charlist(opts[:host]), else: ~c"127.0.0.1"
+    {host, opts[:port] || (cfg && cfg.public_base) || @default_public}
   end
 
   @spec endpoint(config(), pos_integer()) :: {charlist(), pos_integer()}
