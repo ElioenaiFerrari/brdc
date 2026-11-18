@@ -16,7 +16,7 @@ Diagrama deste fluxo: **a gerar** (diagramas adiados a pedido do dono).
 ## Passo a passo
 1. **Entrada.** A transação chega a um nó (`Node.submit`): é validada contra o estado com as pendentes e entra no mempool. O nó avisa a réplica, que a **espalha** a todos os pares (`{:tx}`); cada par a valida e, se for nova, repassa (duplicada é descartada).
 2. **Início da altura.** Com transação pendente, a réplica espera `interval_ms` (agrupamento; 1 s na devnet) e inicia a altura. Quem ainda está parado **inicia** ao receber a primeira mensagem de consenso daquela altura.
-3. **Proposta.** O proponente monta o bloco do seu mempool (`Node.build_proposal`): cabeçalho com `signers` = conjunto de validadores ([ADR-0027](../adr/0027-block-signers-and-fee-split.md), provisório), horário do relógio, raiz de estado. Sem transação para propor, espera uma chegar ou o prazo da rodada passar.
+3. **Proposta.** O proponente monta o bloco do seu mempool (`Node.build_proposal`): cabeçalho com `signers` = conjunto de validadores ([ADR-0027](../adr/0027-block-signers-and-fee-split.md), aceito), horário do relógio, raiz de estado. Sem transação para propor, espera uma chegar ou o prazo da rodada passar.
 4. **Voto.** Cada validador **confere o bloco por inteiro** (`Node.check_block`: assinantes, horário plausível, execução completa, raiz de estado) e dá **prevote**; com mais de 2/3 de prevotes no bloco, **trava** e dá **precommit**. Antes de transmitir qualquer proposta ou voto próprio, a réplica **grava no diário** (ADR-0026).
 5. **Decisão.** Mais de 2/3 de precommits = bloco final com **certificado de commit**. O nó confere o certificado de novo, executa, **grava em disco** (bloco + certificado) e limpa o mempool. A réplica esvazia o diário, avisa os pares (`{:blocks}`) e, se sobrou transação, começa a próxima altura.
 6. **Sem quórum.** Se menos de 2/3 estão no ar, a rede **para** (não bifurca); ao voltar quórum, retoma.
@@ -48,5 +48,5 @@ Diagrama deste fluxo: **a gerar** (diagramas adiados a pedido do dono).
 - **Endereços dos pares estáticos** (lista na configuração); a descoberta por registros assinados existe no P2P, mas não está ligada aqui. Entra no roteiro de dois computadores.
 - **Todos na mesma máquina** nos testes automáticos; a rede entre computadores é validada à mão (M6).
 - **Equivocação só gera evidência**, sem punição.
-- **Taxa repartida entre todos os validadores** do conjunto, não só entre quem assinou: ADR-0027 (**Proposto**).
+- **Taxa repartida entre todos os validadores** do conjunto, não só entre quem assinou: ADR-0027 (**Aceito**; repartir só entre quem assinou fica para quando houver stake).
 - Sem criptografia em repouso e sem controle de quem lê o disco do nó.
