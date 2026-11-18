@@ -39,6 +39,8 @@ Um fluxo por funcionalidade (texto e diagrama) em `docs/flows/`, à medida que c
 - [19 — Produção da moeda (simulada): lastro, emissão, resgate](flows/19-coin-issuance-simulation.md) (Fase 7)
 - [20 — Explorador: blocos, transações e contas, inclusive o que está em andamento](flows/20-explorer.md) (Fase 7)
 - [21 — Rede de teste em dois computadores](flows/21-two-computers.md) (Fase 7)
+- [22 — Laboratório Docker: vários nós, com recursos limitados](flows/22-docker-lab.md) (Fase 7)
+- [23 — Equivocação: um validador assina dois votos conflitantes](flows/23-equivocation.md) (Fase 7)
 
 A [arquitetura](ARCHITECTURE.md) dá a visão geral.
 

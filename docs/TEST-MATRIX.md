@@ -145,6 +145,16 @@ Invariante → teste que o cobre. Linhas *planejadas* ainda não têm teste: ent
 | Oferta, aceite, cancelamento e finalização no JS têm cargas **iguais** às do Elixir | `assets/js/crypto/assets.test.mjs` + `vectors/tx.json` |
 | Ciclo pela rede: classe, registro, oferta, escrow, finalização depois da janela (relógio) | `apps/brdc_dev/test/brdc_dev/devnet_e2e_test.exs` |
 
+## Laboratório Docker, equivocação e vivacidade (pronto)
+| Invariante | Teste |
+|---|---|
+| O compose gerado limita CPU, memória, swap e processos em **todo** serviço; portas só em `127.0.0.1` e a de pares nunca publicada; cada validador monta **só a própria semente**; carteiras em rodízio e sem semente; equivocador só com 4 ou mais validadores, com a semente do último e sem portas | `apps/brdc_dev/test/brdc_dev/compose_test.exs` |
+| `init` cria chaves 0600, gênese com os nomes dos serviços, `.env`; é idempotente; recusa outro número de validadores | `apps/brdc_dev/test/brdc_dev/compose_init_test.exs` |
+| Consulta de consenso `<<15>>`: pares conectados, motor, evidências, pendentes; nó sem consenso responde erro | `apps/brdc_node/test/brdc_node/validator_test.exs` |
+| **Equivocação:** 3 honestos detectam o voto duplo do 4º (evidência sobe em todos) e a rede continua viva com o mesmo hash; falha cedo se não dá para ler a evidência (nunca "não li" = "zero"); chave fora da gênese não equivoca | `apps/brdc_dev/test/brdc_dev/equivocation_test.exs` (60 rodadas seguidas sem falha) |
+| **Vivacidade (ADR-0029):** o proponente sem bloco agenda o prazo da proposta e vota nulo; quem propõe a tempo ignora o prazo; transação enviada a um validador antes dos pares existirem chega a eles ao conectar | `apps/brdc_consensus/test/brdc_consensus/propose_timeout_test.exs`, `apps/brdc_node/test/brdc_node/regossip_test.exs` (**verificados por mutação**: sem cada correção, o teste correspondente falha) |
+| **Verificado à mão no Docker** (OrbStack): imagem de 179 MB; 4 validadores e 2 carteiras; mesmo bloco nos 4; carteira em container mostrando saldo; `pause`, `kill` e volta; 30 transferências com pico de 3,7% de CPU e 135 MB; **equivocação detectada 3 de 3, duas vezes** | (manual, fluxos 22 e 23) |
+
 ## Rede entre computadores (M6, pronta)
 | Invariante | Teste |
 |---|---|

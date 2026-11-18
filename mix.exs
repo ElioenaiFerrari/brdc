@@ -7,7 +7,28 @@ defmodule Brdc.MixProject do
       version: "0.1.0",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      releases: releases(),
       dialyzer: [plt_add_apps: [:mix, :ex_unit]]
+    ]
+  end
+
+  # Release do laboratório Docker (docs/flows/22-docker-lab.md): UMA imagem com todos os apps; o papel de cada
+  # container (validador, carteira, equivocador) vem de BRDC_ROLE. Inclui `brdc_dev` e chaves de teste: NÃO é produção.
+  defp releases do
+    [
+      brdc: [
+        applications: [
+          brdc_crypto: :permanent,
+          brdc_ledger: :permanent,
+          brdc_consensus: :permanent,
+          brdc_p2p: :permanent,
+          brdc_node: :permanent,
+          brdc_web: :permanent,
+          brdc_dev: :permanent
+        ],
+        include_executables_for: [:unix],
+        strip_beams: true
+      ]
     ]
   end
 

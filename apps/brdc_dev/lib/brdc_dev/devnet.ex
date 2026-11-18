@@ -28,17 +28,17 @@ defmodule BrdcDev.Devnet do
   @spec ensure(Path.t(), keyword()) :: {:ok, t()} | {:error, term()}
   def ensure(dir \\ default_dir(), opts \\ []) do
     case existing_validators(dir) do
-      nil -> create(dir, Keyword.get(opts, :validators, 1))
+      nil -> create(dir, Keyword.get(opts, :validators, 1), opts)
       n -> load_existing(dir, n)
     end
   end
 
-  defp create(dir, n) do
+  defp create(dir, n, opts) do
     roles = validator_roles(n) ++ @fixed_roles
 
     with :ok <- ensure_keys(dir, roles),
          {:ok, seeds} <- load_seeds(dir, roles),
-         {:ok, genesis} <- ensure_genesis(dir, n) do
+         {:ok, genesis} <- ensure_genesis(dir, n, opts) do
       {:ok, %{genesis: genesis, dir: dir, seeds: seeds}}
     end
   end
@@ -51,7 +51,7 @@ defmodule BrdcDev.Devnet do
       )
 
     with {:ok, seeds} <- load_seeds(dir, roles),
-         {:ok, genesis} <- ensure_genesis(dir, n) do
+         {:ok, genesis} <- ensure_genesis(dir, n, []) do
       {:ok, %{genesis: genesis, dir: dir, seeds: seeds}}
     end
   end
@@ -111,17 +111,19 @@ defmodule BrdcDev.Devnet do
     end)
   end
 
-  defp ensure_genesis(dir, n) do
+  defp ensure_genesis(dir, n, opts) do
     path = Path.join(dir, "genesis.json")
 
     case File.read(path) do
       {:ok, json} -> Genesis.from_json(json)
-      {:error, :enoent} -> create_genesis(dir, path, n)
+      {:error, :enoent} -> create_genesis(dir, path, n, opts)
       {:error, _} = err -> err
     end
   end
 
-  defp create_genesis(dir, path, n) do
+  # `opts[:chain_id]` (padrão brdc-devnet) e `opts[:bootstrap]`: função `índice -> {host, porta}` que diz onde achar
+  # cada validador (o laboratório Docker usa o nome do serviço). Sem ela, a gênese não leva pares de partida.
+  defp create_genesis(dir, path, n, opts) do
     pub = fn role ->
       {:ok, key} = Keygen.load_public(Path.join(dir, role <> ".pub"))
       key
@@ -129,8 +131,9 @@ defmodule BrdcDev.Devnet do
 
     with {:ok, g} <-
            Genesis.new(
-             chain_id: "brdc-devnet",
+             chain_id: opts[:chain_id] || "brdc-devnet",
              validators: Enum.map(validator_roles(n), pub),
+             bootstrap: bootstrap(n, opts[:bootstrap], pub),
              issuers: [pub.("i1"), pub.("i2")],
              threshold: 2,
              authorities: [pub.("a1"), pub.("a2")],
@@ -141,6 +144,15 @@ defmodule BrdcDev.Devnet do
            ),
          :ok <- File.write(path, Genesis.to_json(g) <> "\n") do
       {:ok, g}
+    end
+  end
+
+  defp bootstrap(_n, nil, _pub), do: []
+
+  defp bootstrap(n, where, pub) do
+    for i <- 1..n do
+      {host, port} = where.(i)
+      %{validator: pub.("v#{i}"), host: host, port: port}
     end
   end
 end

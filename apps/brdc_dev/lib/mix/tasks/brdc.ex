@@ -30,6 +30,22 @@ defmodule Mix.Tasks.Brdc do
       mix phx.server                             carteira em http://localhost:4000 (acha o validador 1 em :4545;
                                                  sem rede gerenciada, embute um nó solo)
 
+    Simulação de falhas (só DESENVOLVIMENTO; fluxo 23)
+      mix brdc.devnet.equivocate [--victim K]    um validador assina dois votos conflitantes: confere se os
+                                                 honestos detectam e se a rede segue viva (só detecção, não punição)
+
+    Laboratório Docker (validadores e carteiras em containers de recursos limitados; fluxos 22 e 23)
+      mix brdc.compose.init [--validators N]     chaves de teste, gênese e docker-compose.yml (pasta compose/)
+      mix brdc.compose.up                        constrói a imagem, sobe tudo e espera a rede andar
+      mix brdc.compose.status                    altura, pares, motor de consenso, evidências e pendentes
+      mix brdc.compose.equivocate                o equivocador toma o lugar do último validador e confere a detecção
+      mix brdc.compose.down [--volumes]          derruba (com --volumes apaga também os blocos)
+
+    Explorador (somente leitura; fluxo 20) e rede entre computadores (fluxo 21)
+      mix brdc.blocks [ALTURA]                   blocos recentes, ou um bloco com o certificado conferido
+      mix brdc.tx ID | --pending | --of CONTA    transação, pendentes ou histórico de uma conta
+      mix brdc.validator --genesis … --seed …    roda UM validador a partir de arquivos (um por computador)
+
     Carteiras de TESTE (frase em texto puro em net/wallets; só para simular pessoas)
       mix brdc.wallet.new NOME                   cria uma carteira de teste
       mix brdc.wallet.list                       lista as carteiras com endereço e saldo

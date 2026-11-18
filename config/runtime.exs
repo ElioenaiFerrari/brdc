@@ -23,6 +23,37 @@ end
 config :brdc_web, BrdcWebWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
+# Nó que a carteira e o explorador consultam (porta pública). Em dev o `dev.exs` já define o padrão; aqui vale
+# para release (laboratório Docker, onde o nó é o serviço `v1`, por exemplo).
+if port = System.get_env("BRDC_NODE_PORT") do
+  config :brdc_web, :node,
+    host: String.to_charlist(System.get_env("BRDC_NODE_HOST", "127.0.0.1")),
+    port: String.to_integer(port)
+end
+
+# Papel deste processo no laboratório Docker (BRDC_ROLE): `validator` e `equivocator` leem a gênese e a semente de
+# arquivos; `wallet` só sobe a web. Sem BRDC_ROLE nada muda (uso normal, `mix`).
+case System.get_env("BRDC_ROLE") do
+  nil ->
+    :ok
+
+  role when role in ["validator", "equivocator"] ->
+    config :brdc_dev, :role,
+      role: String.to_atom(role),
+      genesis: System.get_env("BRDC_GENESIS", "/net/genesis.json"),
+      seed: System.get_env("BRDC_SEED", "/run/seed"),
+      data_dir: System.get_env("BRDC_DATA", "/data/chain"),
+      peer_port: String.to_integer(System.get_env("BRDC_PEER_PORT", "4600")),
+      public_port: String.to_integer(System.get_env("BRDC_PUBLIC_PORT", "4545")),
+      interval_ms: String.to_integer(System.get_env("BRDC_INTERVAL_MS", "1000"))
+
+  "wallet" ->
+    config :brdc_dev, :role, role: :wallet
+
+  other ->
+    raise "BRDC_ROLE inválido: #{inspect(other)} (use validator, wallet ou equivocator)"
+end
+
 if config_env() == :dev do
   # Reload browser tabs when matching files change.
   config :brdc_web, BrdcWebWeb.Endpoint,
@@ -65,6 +96,11 @@ if config_env() == :prod do
       ip: {0, 0, 0, 0, 0, 0, 0, 0}
     ],
     secret_key_base: secret_key_base
+
+  # Origens aceitas no WebSocket do LiveView (sem isso, só a do `PHX_HOST`): vírgulas, ex.: //localhost:4100
+  if origins = System.get_env("BRDC_ALLOWED_ORIGINS") do
+    config :brdc_web, BrdcWebWeb.Endpoint, check_origin: String.split(origins, ",", trim: true)
+  end
 
   # ## SSL Support
   #

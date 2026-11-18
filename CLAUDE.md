@@ -79,6 +79,12 @@ mix brdc.devnet.status  # quem está no ar, altura, pendentes, quórum e acordo
 mix brdc.devnet.kill N  # kill -9 no validador N (simula queda); `up` o religa e ele se atualiza
 mix brdc.devnet.down    # para todos (os blocos ficam em disco)
 mix brdc.devnet.reset   # apaga blocos, diários, pids e logs (--all: e a gênese); com a rede parada
+mix brdc.compose.init && mix brdc.compose.up   # laboratório Docker: validadores e carteiras em containers de recursos limitados (fluxo 22)
+mix brdc.compose.status # altura, pares, motor de consenso, evidências e pendentes de cada validador do laboratório
+mix brdc.compose.equivocate  # um validador do laboratório equivoca (dois votos conflitantes); confere a detecção (fluxo 23)
+mix brdc.devnet.equivocate   # o mesmo na rede local de processos
+mix brdc.blocks|tx      # explorador no terminal (blocos com certificado conferido, transações, pendentes, histórico)
+mix brdc.validator --genesis … --seed …  # roda UM validador a partir de arquivos (rede entre computadores, fluxo 21)
 mix brdc.simulate issuance  # produção da moeda de ponta a ponta (atesta reserva, emite, paga, resgata, confere regras)
 mix brdc.reserve|mint|burn|supply  # os passos avulsos; mix brdc.wallet.new|list e mix brdc.send para pessoas de teste
 mix phx.server          # carteira (4000); acha o validador 1 em 4545; sem rede gerenciada, embute um nó solo

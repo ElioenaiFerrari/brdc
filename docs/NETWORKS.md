@@ -21,6 +21,9 @@ Tempo de bloco, quem são os validadores iniciais e como o conjunto muda (rotaç
 ## Rede de teste em dois computadores
 Cada computador gera as suas chaves (`mix brdc.keygen`), os dois trocam só os `.pub`, um monta a gênese (`mix brdc.genesis … --peer v1=IP:porta …`) e copia o `genesis.json`, e cada um sobe os seus validadores com `mix brdc.validator --genesis … --seed … --data … --peer-port … --public-port …`. As ferramentas consultam outro computador com `--host IP`, e a carteira com `BRDC_NODE_HOST`. O passo a passo completo, o que foi ensaiado e o que ainda não foi está no **[fluxo 21](flows/21-two-computers.md)**.
 
+## Laboratório Docker
+Quatro validadores e duas carteiras, cada um num container de recursos limitados, todos da **mesma imagem**: `mix brdc.compose.init`, `mix brdc.compose.up`, `mix brdc.compose.status`, `mix brdc.compose.down`. Portas só em `127.0.0.1` e diferentes das da rede local (`4700+` e `4100+`), então os dois ambientes rodam juntos. Passo a passo, limites e receitas de caos (`pause`, `kill`, partição) no **[fluxo 22](flows/22-docker-lab.md)**; a simulação de um validador que equivoca no **[fluxo 23](flows/23-equivocation.md)**.
+
 ## Subir a rede de teste local (vários validadores, tudo por `mix`)
 ```
 mix brdc.devnet.init --validators 4     # (opcional) cria a gênese e as chaves; `up` cria sozinho se faltar

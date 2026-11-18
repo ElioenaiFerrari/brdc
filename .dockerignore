@@ -1,0 +1,15 @@
+# fora do contexto da build: o que é gerado, segredo ou só documentação
+.git
+_build
+deps
+node_modules
+**/node_modules
+erl_crash.dump
+net
+testnet
+compose
+docs
+skills-lock.json
+**/*.seed
+**/*.key
+**/.env

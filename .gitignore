@@ -35,6 +35,10 @@ __pycache__/
 # Redes de teste locais (chaves e genesis gerados por mix brdc.keygen/brdc.genesis)
 /net/
 /dev-net/
+/testnet/
 
 # Diretórios temporários dos testes (ExUnit tmp_dir)
 tmp/
+
+# laboratório Docker: chaves de teste, .env e o compose gerado (mix brdc.compose.init)
+/compose/

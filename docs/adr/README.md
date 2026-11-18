@@ -31,6 +31,8 @@ Cada decisão de segurança ou produto vira um ADR: contexto, decisão, alternat
 | [0025](0025-block-interval-and-otp-libraries.md) | Intervalo entre blocos e bibliotecas OTP da Fase 7 | Aceito |
 | [0026](0026-consensus-safety-journal.md) | Diário de segurança do consenso: gravar antes de transmitir | Aceito |
 | [0027](0027-block-signers-and-fee-split.md) | Quem aparece em `signers` do bloco e como a taxa é repartida | **Aceito** |
+| [0028](0028-docker-lab.md) | Laboratório Docker de vários nós: uma imagem, vários papéis | **Aceito** |
+| [0029](0029-propose-timeout-and-mempool-regossip.md) | O prazo da proposta vale para o proponente, e o mempool é reenviado a quem conecta | **Aceito** |
 
 ## Decisões PENDENTES (esperam o dono do produto)
 Nada abaixo entra em código antes da resposta.
