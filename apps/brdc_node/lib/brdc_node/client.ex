@@ -276,6 +276,36 @@ defmodule BrdcNode.Client do
     end
   end
 
+  @doc """
+  O consenso do nó, como ele vê: `%{height, engine, connected, evidence, pending}`. `engine` é `nil` quando a
+  rede está parada (não há bloco vazio) ou `%{height, round, step}` quando decide uma altura; `connected` são as
+  chaves dos pares com sessão aberta agora; `evidence` conta equivocações detectadas (só em memória). Um nó sem
+  consenso (solo) responde `{:error, "no_consensus"}`.
+  """
+  @spec consensus_info(endpoint()) :: {:ok, map()} | {:error, term()}
+  def consensus_info({host, port}) do
+    with {:ok, bin} <- PublicPort.request(host, port, :query, <<15>>),
+         {:ok, [height, has_engine, eh, er, step, connected, evidence, pending]} <-
+           Encoding.decode(
+             [:u64, :u8, :u64, :u32, :string, {:list, {:fixed, 32}}, :u32, :u32],
+             bin
+           ) do
+      engine = if has_engine == 1, do: %{height: eh, round: er, step: step}, else: nil
+
+      {:ok,
+       %{
+         height: height,
+         engine: engine,
+         connected: connected,
+         evidence: evidence,
+         pending: pending
+       }}
+    else
+      {:error, _} = err -> err
+      _ -> {:error, :bad_response}
+    end
+  end
+
   @doc "As chaves dos validadores em vigor, **segundo o nó** (para conferir, fixe as da gênese)."
   @spec validators(endpoint()) :: {:ok, [<<_::256>>]} | {:error, term()}
   def validators({host, port}) do

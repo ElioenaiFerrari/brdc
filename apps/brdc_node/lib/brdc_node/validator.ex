@@ -82,7 +82,7 @@ defmodule BrdcNode.Validator do
     {:ok, public} =
       PublicPort.start_link(
         guard: guard,
-        handler: Handler.fun(node),
+        handler: Handler.fun(node, replica: replica),
         port: Keyword.get(opts, :public_port, 0)
       )
 

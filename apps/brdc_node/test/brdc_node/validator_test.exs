@@ -103,6 +103,14 @@ defmodule BrdcNode.ValidatorTest do
 
     await(fn -> Enum.all?(vs, &(length(BrdcNode.Replica.connected(&1.replica)) == 3)) end)
 
+    # a rede parada: cada um vê os 3 pares, nenhum motor aberto (não há bloco vazio) e nenhuma evidência
+    for v <- vs do
+      assert {:ok, info} = Client.consensus_info(endpoint(v))
+      assert length(info.connected) == 3
+      assert info.engine == nil
+      assert {info.evidence, info.pending, info.height} == {0, 0, 0}
+    end
+
     to = Address.hash(keys["i1"].public_key)
     assert {:ok, _} = Client.submit_tx(endpoint(Enum.at(vs, 1)), mint(keys, to, 3_000_000, "r1"))
 
@@ -119,6 +127,39 @@ defmodule BrdcNode.ValidatorTest do
       end
 
     assert hashes |> Enum.uniq() |> length() == 1
+
+    # depois do bloco: altura 1 em todos, ainda sem evidência de equivocação
+    for v <- vs do
+      assert {:ok, %{height: 1, evidence: 0, pending: 0}} = Client.consensus_info(endpoint(v))
+    end
+  end
+
+  test "nó sem consenso (solo) responde que não tem consenso", %{tmp_dir: dir} do
+    {:ok, g} =
+      Genesis.new(
+        chain_id: "solo",
+        validators: [Ed25519.public_key(:crypto.hash(:sha256, "solo"))],
+        issuers: [Ed25519.public_key(:crypto.hash(:sha256, "i"))],
+        threshold: 1
+      )
+
+    {:ok, node} =
+      BrdcNode.Node.start_link(
+        genesis: g,
+        seed: :crypto.hash(:sha256, "solo"),
+        block_interval_ms: :manual,
+        data_dir: Path.join(dir, "solo")
+      )
+
+    {:ok, guard} = BrdcP2p.Guard.start_link(sweep_ms: :never)
+
+    {:ok, port} =
+      BrdcP2p.PublicPort.start_link(guard: guard, handler: BrdcNode.Handler.fun(node), port: 0)
+
+    on_exit(fn -> catch_exit(BrdcP2p.PublicPort.stop(port)) end)
+
+    assert {:error, "no_consensus"} =
+             Client.consensus_info({~c"127.0.0.1", BrdcP2p.PublicPort.port(port)})
   end
 
   test "uma chave que não está na gênese não sobe como validador", %{tmp_dir: dir} do

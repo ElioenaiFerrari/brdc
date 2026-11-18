@@ -6,14 +6,14 @@ defmodule BrdcNode.Handler do
   - `:status` → `[chain_id, altura, horário, oferta, hash do último bloco, pendentes, taxa-base, taxa por byte]`
   - `:get_account` (corpo: 32 bytes do endereço) → `[saldo, nonce, saldo com pendentes, nonce com pendentes]`
   - `:submit_tx` (corpo: transação assinada) → id de 32 bytes, ou o motivo da recusa
-  - `:query` (`<<1, endereço>>` contratos · `<<2, endereço>>` credenciais do titular · `<<3, chave pública>>` tipos cujo órgão inclui a chave · `<<4, endereço>>` bens · `<<5, chave pública>>` classes do órgão · `<<6, chave pública>>` bens das classes do órgão · `<<7, chave pública>>` credenciais dos órgãos · `<<8>>` oferta e reserva · explorador: `<<9, antes::u64, quantos::u16>>` resumos de blocos · `<<10, altura::u64>>` bloco e certificado · `<<11, id>>` transação · `<<12, endereço, limite::u16>>` histórico da conta · `<<13, limite::u16>>` pendentes · `<<14>>` validadores)
+  - `:query` (`<<1, endereço>>` contratos · `<<2, endereço>>` credenciais do titular · `<<3, chave pública>>` tipos cujo órgão inclui a chave · `<<4, endereço>>` bens · `<<5, chave pública>>` classes do órgão · `<<6, chave pública>>` bens das classes do órgão · `<<7, chave pública>>` credenciais dos órgãos · `<<8>>` oferta e reserva · explorador: `<<9, antes::u64, quantos::u16>>` resumos de blocos · `<<10, altura::u64>>` bloco e certificado · `<<11, id>>` transação · `<<12, endereço, limite::u16>>` histórico da conta · `<<13, limite::u16>>` pendentes · `<<14>>` validadores · consenso: `<<15>>` altura, rodada, passo, pares conectados, evidências, pendentes, só com réplica)
   - `:proposal` (`<<1, tipo, campos>>` propõe (emissão, registro, veto, gravame) · `<<2, id, aprovação>>` aprova · `<<3, chave pública>>` lista as dos seus órgãos)
   - `:get_block` → ainda não suportado (o bloco não tem codificação de rede)
   """
   alias BrdcConsensus.Certificate
   alias BrdcCrypto.Encoding
   alias BrdcLedger.{Block, Tx}
-  alias BrdcNode.{Node, Proposals}
+  alias BrdcNode.{Node, Proposals, Replica}
 
   @status [:string, :u64, :u64, :u64, :bytes, :u32, :u64, :u64, :u64, :u64, :u64, :u64]
   @contract [
@@ -52,13 +52,37 @@ defmodule BrdcNode.Handler do
   @block_row [:u64, :u64, {:fixed, 32}, {:fixed, 32}, :u32, :u32]
   @tx_row [:u64, :u32, :u64, {:fixed, 32}, :bytes]
   @history_row [{:fixed, 32}, :u64, :u64, :u8, :u8]
+  @consensus [:u64, :u8, :u64, :u32, :string, {:list, {:fixed, 32}}, :u32, :u32]
   @max_contracts 100
   @account [:u64, :u64, :u64, :u64]
 
   @doc "Função de tratamento para o `PublicPort`."
   @spec fun(GenServer.server()) :: (atom(), binary() ->
                                       {:ok, binary()} | {:error, atom() | String.t()})
-  def fun(node), do: fn kind, body -> handle(node, kind, body) end
+  def fun(node, opts \\ []), do: fn kind, body -> dispatch(node, kind, body, opts) end
+
+  # a consulta de consenso precisa da réplica (o nó sozinho não tem consenso); o resto é do nó
+  defp dispatch(_node, :query, <<15>>, opts), do: consensus(opts[:replica])
+  defp dispatch(node, kind, body, _opts), do: handle(node, kind, body)
+
+  defp consensus(nil), do: {:error, "no_consensus"}
+
+  defp consensus(replica) do
+    i = Replica.info(replica)
+    {eh, er, step} = i.engine || {0, 0, nil}
+
+    {:ok,
+     Encoding.encode(@consensus, [
+       i.height,
+       if(i.engine, do: 1, else: 0),
+       eh,
+       er,
+       if(step, do: Atom.to_string(step), else: ""),
+       i.connected,
+       i.evidence,
+       i.pending
+     ])}
+  end
 
   @doc false
   def handle(node, :status, _body) do

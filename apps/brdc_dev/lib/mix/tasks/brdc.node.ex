@@ -60,7 +60,7 @@ defmodule Mix.Tasks.Brdc.Node do
     {:ok, port} =
       PublicPort.start_link(
         guard: guard,
-        handler: Handler.fun(node),
+        handler: Handler.fun(node, replica: replica),
         port: Net.public_port(cfg, i)
       )
 
