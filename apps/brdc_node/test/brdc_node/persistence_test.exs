@@ -189,7 +189,11 @@ defmodule BrdcNode.PersistenceTest do
     {:ok, s, [], _} = LogFile.open(log)
     {init, [last]} = Enum.split(records, -1)
     for r <- init, do: :ok = LogFile.append(s, r)
-    {:ok, b} = Block.decode(last)
+
+    # registro novo: 0xFF ‖ 1 ‖ [bloco, certificado]; reescrevemos o último no formato ANTIGO (só o bloco)
+    <<0xFF, 1, env::binary>> = last
+    {:ok, [block_bin, _cert]} = BrdcCrypto.Encoding.decode([:bytes, :bytes], env)
+    {:ok, b} = Block.decode(block_bin)
     :ok = LogFile.append(s, Block.encode(%{b | state_root: :crypto.hash(:sha256, "outra")}))
     LogFile.close(s)
 

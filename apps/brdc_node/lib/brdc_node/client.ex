@@ -143,6 +143,33 @@ defmodule BrdcNode.Client do
     }
   end
 
+  @doc """
+  Oferta e reserva: `%{minted, burned, supply, attestation}` (`attestation` é `nil` ou `%{seq, reserve, ref}`),
+  mais `coverage`: `:none`, `{:covered, margem}` ou `{:under, falta}` (só informação, ADR-0009).
+  """
+  @spec supply({charlist(), pos_integer()}) :: {:ok, map()} | {:error, term()}
+  def supply({host, port}) do
+    with {:ok, bin} <- PublicPort.request(host, port, :query, <<8>>),
+         {:ok, [minted, burned, seq, reserve, ref]} <-
+           Encoding.decode([:u64, :u64, :u64, :u64, :string], bin) do
+      supply = minted - burned
+      att = if seq == 0, do: nil, else: %{seq: seq, reserve: reserve, ref: ref}
+
+      coverage =
+        cond do
+          att == nil -> :none
+          reserve >= supply -> {:covered, reserve - supply}
+          true -> {:under, supply - reserve}
+        end
+
+      {:ok,
+       %{minted: minted, burned: burned, supply: supply, attestation: att, coverage: coverage}}
+    else
+      {:error, _} = err -> err
+      _ -> {:error, :bad_response}
+    end
+  end
+
   @doc "Bens que o endereço possui ou está comprando, com a negociação em curso."
   @spec assets_of(endpoint(), <<_::256>>) :: {:ok, [map()]} | {:error, term()}
   def assets_of({host, port}, <<_::256>> = addr),

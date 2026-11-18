@@ -6,7 +6,7 @@ defmodule BrdcNode.Handler do
   - `:status` → `[chain_id, altura, horário, oferta, hash do último bloco, pendentes, taxa-base, taxa por byte]`
   - `:get_account` (corpo: 32 bytes do endereço) → `[saldo, nonce, saldo com pendentes, nonce com pendentes]`
   - `:submit_tx` (corpo: transação assinada) → id de 32 bytes, ou o motivo da recusa
-  - `:query` (`<<1, endereço>>` contratos · `<<2, endereço>>` credenciais do titular · `<<3, chave pública>>` tipos cujo órgão inclui a chave · `<<4, endereço>>` bens · `<<5, chave pública>>` classes do órgão · `<<6, chave pública>>` bens das classes do órgão · `<<7, chave pública>>` credenciais dos órgãos)
+  - `:query` (`<<1, endereço>>` contratos · `<<2, endereço>>` credenciais do titular · `<<3, chave pública>>` tipos cujo órgão inclui a chave · `<<4, endereço>>` bens · `<<5, chave pública>>` classes do órgão · `<<6, chave pública>>` bens das classes do órgão · `<<7, chave pública>>` credenciais dos órgãos · `<<8>>` oferta e reserva)
   - `:proposal` (`<<1, tipo, campos>>` propõe (emissão, registro, veto, gravame) · `<<2, id, aprovação>>` aprova · `<<3, chave pública>>` lista as dos seus órgãos)
   - `:get_block` → ainda não suportado (o bloco não tem codificação de rede)
   """
@@ -124,6 +124,19 @@ defmodule BrdcNode.Handler do
       end)
 
     {:ok, Encoding.encode([{:list, :bytes}], [entries])}
+  end
+
+  # oferta e reserva: emitido, queimado, sequência e valor do último atestado (0 = nunca houve) e a referência
+  def handle(node, :query, <<8>>) do
+    i = Node.supply_info(node)
+
+    {seq, reserve, ref} =
+      if i.attestation,
+        do: {i.attestation.seq, i.attestation.reserve, i.attestation.ref},
+        else: {0, 0, ""}
+
+    {:ok,
+     Encoding.encode([:u64, :u64, :u64, :u64, :string], [i.minted, i.burned, seq, reserve, ref])}
   end
 
   def handle(node, :query, <<7, pub::binary-size(32)>>),

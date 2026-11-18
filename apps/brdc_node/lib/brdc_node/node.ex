@@ -16,7 +16,8 @@ defmodule BrdcNode.Node do
     que impede abrir o disco de outra rede.
   """
   use GenServer
-  alias BrdcCrypto.{Address, Ed25519}
+  alias BrdcConsensus.Certificate
+  alias BrdcCrypto.{Address, Ed25519, Encoding}
   alias BrdcLedger.{Block, Executor, State, Tx}
   alias BrdcNode.BlockStore.File, as: LogFile
   alias BrdcNode.{Genesis, Proposals}
@@ -78,6 +79,13 @@ defmodule BrdcNode.Node do
   @spec organ_credentials(GenServer.server(), <<_::256>>) :: [map()]
   def organ_credentials(node, pub), do: GenServer.call(node, {:organ_credentials, pub})
 
+  @doc """
+  Oferta e reserva (estado confirmado): quanto foi emitido, queimado, e o último atestado de reserva dos emissores
+  (`nil` se nunca houve). A cobertura é só informação: a rede não prova a reserva em reais (ADR-0009).
+  """
+  @spec supply_info(GenServer.server()) :: map()
+  def supply_info(node), do: GenServer.call(node, :supply_info)
+
   @doc "Classes de bens cujo órgão inclui a chave pública."
   @spec classes_for(GenServer.server(), <<_::256>>) :: [map()]
   def classes_for(node, pub), do: GenServer.call(node, {:classes_for, pub})
@@ -102,6 +110,38 @@ defmodule BrdcNode.Node do
   @doc "Produz um bloco agora, se houver transação pendente (testes e modo manual)."
   @spec produce(GenServer.server()) :: {:ok, pos_integer()} | :nothing
   def produce(node), do: GenServer.call(node, :produce)
+
+  @doc """
+  Modo de **vários validadores** (M2, ADR-0027): monta a proposta de bloco com as transações do mempool, **sem**
+  confirmá-la. O cabeçalho leva como `signers` o conjunto de validadores em vigor. `:nothing` se não há o que propor.
+  """
+  @spec build_proposal(GenServer.server()) :: {:ok, Block.t()} | :nothing
+  def build_proposal(node), do: GenServer.call(node, :build_proposal)
+
+  @doc """
+  Confere um bloco recebido (como cada validador faz antes de dar prevote): cabeçalho de assinantes, horário
+  plausível (`now` em segundos) e **execução completa** sobre o estado confirmado, sem alterá-lo.
+  """
+  @spec check_block(GenServer.server(), Block.t(), non_neg_integer()) :: :ok | {:error, term()}
+  def check_block(node, block, now), do: GenServer.call(node, {:check_block, block, now})
+
+  @doc """
+  Confirma um bloco **decidido** pelo consenso: confere o certificado de commit (mais de 2/3 dos validadores,
+  assinaturas e hash do bloco), executa, grava com o certificado e limpa o mempool. Idempotente para o bloco
+  que já está confirmado.
+  """
+  @spec commit_block(GenServer.server(), Block.t(), Certificate.t()) ::
+          {:ok, pos_integer()} | {:error, term()}
+  def commit_block(node, block, cert), do: GenServer.call(node, {:commit_block, block, cert})
+
+  @doc "Blocos confirmados a partir de `from`, no máximo `max`, com o certificado de cada um (sincronização)."
+  @spec blocks_from(GenServer.server(), pos_integer(), pos_integer()) ::
+          [{Block.t(), Certificate.t() | nil}]
+  def blocks_from(node, from, max), do: GenServer.call(node, {:blocks_from, from, max})
+
+  @doc "Quem recebe `{:brdc_tx, bytes}` a cada transação **nova** aceita no mempool (para espalhar aos pares)."
+  @spec set_tx_hook(GenServer.server(), pid() | nil) :: :ok
+  def set_tx_hook(node, pid), do: GenServer.call(node, {:tx_hook, pid})
 
   @doc "Quem se inscreve recebe `{:brdc_block, altura, [txid]}` a cada bloco."
   @spec subscribe(GenServer.server()) :: :ok
@@ -130,6 +170,8 @@ defmodule BrdcNode.Node do
       clock: Keyword.get(opts, :clock, fn -> System.os_time(:second) end),
       timer: nil,
       subscribers: %{},
+      certs: %{},
+      tx_hook: nil,
       store: nil,
       data_dir: nil
     }
@@ -209,6 +251,18 @@ defmodule BrdcNode.Node do
     end
   end
 
+  def handle_call(:supply_info, _from, s) do
+    st = s.state
+
+    {:reply,
+     %{
+       minted: st.minted,
+       burned: st.burned,
+       supply: State.supply(st),
+       attestation: st.attestation
+     }, s}
+  end
+
   def handle_call({:organ_credentials, pub}, _from, s) do
     st = s.state
 
@@ -253,10 +307,35 @@ defmodule BrdcNode.Node do
          :ok <- check(not Enum.any?(s.mempool, &(Tx.id(&1) == Tx.id(tx))), :duplicate),
          {:ok, pending, _fee} <- Executor.apply_tx(at_next_block(s), tx) do
       s = %{s | mempool: s.mempool ++ [tx], pending_state: pending}
+      if s.tx_hook, do: send(s.tx_hook, {:brdc_tx, bin})
       {:reply, {:ok, Tx.id(tx)}, arm(s)}
     else
       {:error, _} = err -> {:reply, err, s}
     end
+  end
+
+  def handle_call({:tx_hook, pid}, _from, s), do: {:reply, :ok, %{s | tx_hook: pid}}
+
+  def handle_call(:build_proposal, _from, s), do: {:reply, proposal(s), s}
+
+  def handle_call({:check_block, block, now}, _from, s),
+    do: {:reply, check_proposed(s, block, now), s}
+
+  def handle_call({:commit_block, block, cert}, _from, s) do
+    case commit_decided(s, block, cert) do
+      {:ok, s2, height} -> {:reply, {:ok, height}, s2}
+      {:already, s2} -> {:reply, {:ok, block.height}, s2}
+      {:error, _} = err -> {:reply, err, s}
+    end
+  end
+
+  def handle_call({:blocks_from, from, max}, _from, s) do
+    list =
+      for h <- from..(from + max - 1)//1, {:ok, b} <- [Map.fetch(s.blocks, h)] do
+        {b, Map.get(s.certs, h)}
+      end
+
+    {:reply, list, s}
   end
 
   def handle_call(:produce, _from, s) do
@@ -332,7 +411,7 @@ defmodule BrdcNode.Node do
 
     case Block.build(s.state, s.proposer, [s.proposer], txs, time) do
       {:ok, block, new_state} ->
-        commit(s, block, new_state, rest)
+        commit(s, block, nil, new_state, rest)
 
       {:error, {:invalid_tx, id, _reason}} ->
         # não deveria acontecer (cada tx foi validada ao entrar); descarta a ofensora e tenta de novo
@@ -347,13 +426,15 @@ defmodule BrdcNode.Node do
 
   # grava no disco ANTES de o bloco entrar no estado: se a gravação falhar, nada mudou e as transações seguem
   # no mempool (o erro vai para o log; o operador age)
-  defp commit(s, block, new_state, rest) do
-    case persist_block(s, block) do
+  defp commit(s, block, cert, new_state, rest) do
+    case persist_block(s, block, cert) do
       :ok ->
-        s = %{s | state: new_state, mempool: rest, blocks: keep(s.blocks, block)}
+        {kept, pending} = prune_mempool(new_state, rest)
+        s = %{s | state: new_state, mempool: kept, blocks: keep(s.blocks, block)}
+        s = %{s | certs: keep_cert(s.certs, block.height, cert)}
         s = %{s | proposals: Proposals.prune(s.proposals, new_state)}
         persist_proposals(s)
-        s = %{s | pending_state: replay(new_state, rest)}
+        s = %{s | pending_state: pending}
         notify(s, block)
         {:ok, s, block.height}
 
@@ -363,13 +444,109 @@ defmodule BrdcNode.Node do
     end
   end
 
+  # as pendentes que ainda valem sobre o novo estado (as que ficaram inválidas, por exemplo por nonce já usado,
+  # saem), mais o estado "com as pendentes"
+  defp prune_mempool(state, txs) do
+    Enum.reduce(txs, {[], state}, fn tx, {kept, acc} ->
+      case Executor.apply_tx(acc, tx) do
+        {:ok, next, _fee} -> {kept ++ [tx], next}
+        {:error, _} -> {kept, acc}
+      end
+    end)
+  end
+
+  defp keep_cert(certs, _h, nil), do: certs
+  defp keep_cert(certs, h, cert), do: certs |> Map.put(h, cert) |> Map.delete(h - 1_000)
+
+  # --- vários validadores: proposta, conferência e confirmação com certificado ------------------------
+
+  # signers do cabeçalho = endereços de todos os validadores em vigor, em ordem (ADR-0027)
+  defp signers(s), do: s.genesis.validators |> Enum.map(&Address.hash/1) |> Enum.sort()
+
+  defp proposal(%{mempool: []}), do: :nothing
+
+  defp proposal(s) do
+    {txs, _rest} = take(s.mempool, s.state.params)
+    time = max(s.clock.(), s.state.time)
+
+    case Block.build(s.state, s.proposer, signers(s), txs, time) do
+      {:ok, block, _state} -> {:ok, block}
+      {:error, _} -> :nothing
+    end
+  end
+
+  defp check_proposed(s, block, now) do
+    with :ok <- check(block.signers == signers(s), :bad_signers),
+         :ok <- check(Block.plausible_time?(block.time, s.state.time, now), :implausible_time),
+         {:ok, _state} <- Block.apply(s.state, block) do
+      :ok
+    end
+  end
+
+  defp commit_decided(s, block, cert) do
+    if block.height <= s.state.height,
+      do: already_committed(s, block),
+      else: commit_new(s, block, cert)
+  end
+
+  # já confirmado: só é idempotente se for o MESMO bloco
+  defp already_committed(s, block) do
+    if same_block?(Map.get(s.blocks, block.height), block),
+      do: {:already, s},
+      else: {:error, :conflicting_block}
+  end
+
+  defp commit_new(s, block, cert) do
+    with :ok <- check(cert != nil and cert.block_hash == Block.hash(block), :cert_hash_mismatch),
+         :ok <- check(cert.height == block.height, :cert_height_mismatch),
+         :ok <- Certificate.verify(cert, s.state.params.chain_id, s.genesis.validators),
+         :ok <- check(block.signers == signers(s), :bad_signers),
+         {:ok, new_state} <- Block.apply(s.state, block) do
+      ids = MapSet.new(block.txs, &Tx.id/1)
+      rest = Enum.reject(s.mempool, &MapSet.member?(ids, Tx.id(&1)))
+
+      case commit(s, block, cert, new_state, rest) do
+        {:ok, s2, h} -> {:ok, s2, h}
+        {:nothing, _} -> {:error, :disk}
+      end
+    end
+  end
+
+  defp same_block?(nil, _block), do: false
+  defp same_block?(a, b), do: Block.hash(a) == Block.hash(b)
+
   defp save_proposals(s) do
     persist_proposals(s)
     s
   end
 
-  defp persist_block(%{store: nil}, _block), do: :ok
-  defp persist_block(%{store: store}, block), do: LogFile.append(store, Block.encode(block))
+  defp persist_block(%{store: nil}, _block, _cert), do: :ok
+
+  defp persist_block(%{store: store}, block, cert),
+    do: LogFile.append(store, record(block, cert))
+
+  # registro novo: `0xFF ‖ 1 ‖ [bloco, certificado (vazio se não há)]`; os da M1 eram só o bloco
+  defp record(block, cert) do
+    cert_bin = if cert, do: Certificate.encode(cert), else: <<>>
+    <<0xFF, 1>> <> Encoding.encode([:bytes, :bytes], [Block.encode(block), cert_bin])
+  end
+
+  defp parse_record(<<0xFF, 1, rest::binary>>) do
+    with {:ok, [block_bin, cert_bin]} <- Encoding.decode([:bytes, :bytes], rest),
+         {:ok, block} <- Block.decode(block_bin),
+         {:ok, cert} <- parse_cert(cert_bin) do
+      {:ok, block, cert}
+    else
+      _ -> {:error, :malformed}
+    end
+  end
+
+  defp parse_record(old) do
+    with {:ok, block} <- Block.decode(old), do: {:ok, block, nil}
+  end
+
+  defp parse_cert(<<>>), do: {:ok, nil}
+  defp parse_cert(bin), do: Certificate.decode(bin)
 
   # --- disco: replay ao subir e propostas ----------------------------------------------------------
 
@@ -379,14 +556,14 @@ defmodule BrdcNode.Node do
     with :ok <- File.mkdir_p(dir),
          :ok <- check_genesis(dir, s.genesis),
          {:ok, store, records, recovery} <- LogFile.open(Path.join(dir, "blocks.log")),
-         {:ok, state, blocks} <- replay_blocks(state, records) do
+         {:ok, state, blocks, certs} <- replay_blocks(s, state, records) do
       if recovery.truncated_bytes > 0,
         do:
           Logger.warning(
             "log de blocos: cauda rasgada descartada (#{recovery.truncated_bytes} bytes)"
           )
 
-      s = %{s | store: store, data_dir: dir, blocks: blocks}
+      s = %{s | store: store, data_dir: dir, blocks: blocks, certs: certs}
       {:ok, %{s | proposals: load_proposals(dir, state)}, state}
     end
   end
@@ -404,15 +581,26 @@ defmodule BrdcNode.Node do
   end
 
   # cada bloco do disco é decodificado e REEXECUTADO: raiz de estado, altura e encadeamento conferem
-  defp replay_blocks(state, records) do
-    Enum.reduce_while(records, {:ok, state, %{}}, fn rec, {:ok, st, blocks} ->
-      with {:ok, block} <- Block.decode(rec),
+  defp replay_blocks(s, state, records) do
+    pubs = s.genesis.validators
+
+    Enum.reduce_while(records, {:ok, state, %{}, %{}}, fn rec, {:ok, st, blocks, certs} ->
+      with {:ok, block, cert} <- parse_record(rec),
+           :ok <- verify_disk_cert(cert, block, st.params.chain_id, pubs),
            {:ok, st2} <- Block.apply(st, block) do
-        {:cont, {:ok, st2, keep(blocks, block)}}
+        {:cont, {:ok, st2, keep(blocks, block), keep_cert(certs, block.height, cert)}}
       else
         {:error, reason} -> {:halt, {:error, {:bad_block_on_disk, st.height + 1, reason}}}
       end
     end)
+  end
+
+  # o certificado gravado junto do bloco é conferido de novo ao subir
+  defp verify_disk_cert(nil, _block, _chain, _pubs), do: :ok
+
+  defp verify_disk_cert(cert, block, chain, pubs) do
+    with :ok <- check(cert.block_hash == Block.hash(block), :cert_hash_mismatch),
+         do: Certificate.verify(cert, chain, pubs)
   end
 
   defp load_proposals(dir, state) do

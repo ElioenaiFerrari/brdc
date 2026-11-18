@@ -106,6 +106,19 @@ defmodule BrdcConsensus.Engine do
     e |> resume_start() |> settle() |> flush()
   end
 
+  @doc """
+  Tudo o que o motor sabe da altura em curso (propostas e votos, de todos os validadores), das últimas
+  `rounds` rodadas. Serve para **reenviar** a quem acabou de (re)conectar: são mensagens assinadas, qualquer
+  um as confere e repassa; reentregar é inofensivo (o motor ignora o que já tem).
+  """
+  @spec known_messages(%__MODULE__{}, pos_integer()) :: [Proposal.t() | Vote.t()]
+  def known_messages(%__MODULE__{} = e, rounds \\ 4) do
+    min_round = max(e.round - rounds + 1, 0)
+    proposals = for {r, p} <- e.proposals, r >= min_round, do: p
+    votes = for {{_t, r}, m} <- e.votes, r >= min_round, {_voter, v} <- m, do: v
+    proposals ++ votes
+  end
+
   @doc "Decisão tomada, se houver."
   @spec decision(%__MODULE__{}) :: nil | {term(), Certificate.t()}
   def decision(%__MODULE__{decision: d}), do: d

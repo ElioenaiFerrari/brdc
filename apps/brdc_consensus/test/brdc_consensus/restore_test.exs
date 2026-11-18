@@ -63,6 +63,44 @@ defmodule BrdcConsensus.RestoreTest do
     end
   end
 
+  describe "reenvio a quem (re)conecta" do
+    test "known_messages devolve propostas e votos de todos os validadores, só das últimas rodadas" do
+      {e, _} = Engine.start(engine(2))
+      {e, _} = Engine.handle(e, {:proposal, proposal(1, 0, {:txs, :b})})
+      {e, _} = Engine.handle(e, {:vote, vote(0, :prevote, 0, {:txs, :b})})
+      msgs = Engine.known_messages(e)
+      assert Enum.count(msgs, &match?(%Proposal{}, &1)) == 1
+      # o prevote próprio (validador 2) e o do validador 0
+      assert msgs |> Enum.filter(&match?(%Vote{}, &1)) |> Enum.map(& &1.voter) |> Enum.sort() ==
+               Enum.sort([Enum.at(pubs(), 0), Enum.at(pubs(), 2)])
+
+      # reentregar a mesma coisa a outro motor é inofensivo: ele chega ao mesmo estado e não assina nada novo
+      {fresh, _} = Engine.start(engine(3))
+
+      {fresh, acts} =
+        Enum.reduce(msgs, {fresh, []}, fn
+          %Proposal{} = p, {eng, a} ->
+            (fn {e2, x} -> {e2, a ++ x} end).(Engine.handle(eng, {:proposal, p}))
+
+          %Vote{} = v, {eng, a} ->
+            (fn {e2, x} -> {e2, a ++ x} end).(Engine.handle(eng, {:vote, v}))
+        end)
+
+      {again, acts2} =
+        Enum.reduce(msgs, {fresh, []}, fn
+          %Proposal{} = p, {eng, a} ->
+            (fn {e2, x} -> {e2, a ++ x} end).(Engine.handle(eng, {:proposal, p}))
+
+          %Vote{} = v, {eng, a} ->
+            (fn {e2, x} -> {e2, a ++ x} end).(Engine.handle(eng, {:vote, v}))
+        end)
+
+      assert {again.round, again.step} == {fresh.round, fresh.step}
+      assert broadcasts(acts2) == []
+      assert is_list(acts)
+    end
+  end
+
   describe "por que o diário existe" do
     # validador 2 (não propõe a rodada 0 da altura 1) prevota no bloco B e cai
     setup do
