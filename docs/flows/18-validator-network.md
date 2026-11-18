@@ -48,5 +48,6 @@ Diagrama deste fluxo: **a gerar** (diagramas adiados a pedido do dono).
 - **Endereços dos pares estáticos** (lista na configuração); a descoberta por registros assinados existe no P2P, mas não está ligada aqui. Entra no roteiro de dois computadores.
 - **Todos na mesma máquina** nos testes automáticos; a rede entre computadores é validada à mão (M6).
 - **Equivocação só gera evidência**, sem punição.
+- **O prazo da proposta vale também para o proponente e o mempool é reenviado a quem conecta** ([ADR-0029](../adr/0029-propose-timeout-and-mempool-regossip.md)): achado pelo simulador de equivocação.
 - **Taxa repartida entre todos os validadores** do conjunto, não só entre quem assinou: ADR-0027 (**Aceito**; repartir só entre quem assinou fica para quando houver stake).
 - Sem criptografia em repouso e sem controle de quem lê o disco do nó.

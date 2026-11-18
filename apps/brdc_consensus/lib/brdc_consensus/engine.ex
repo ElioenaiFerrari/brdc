@@ -148,8 +148,13 @@ defmodule BrdcConsensus.Engine do
 
   # --- rodadas --------------------------------------------------------------
 
+  # O prazo da proposta vale para TODOS, inclusive o proponente (como no Tendermint). Sem ele, um proponente sem
+  # nada para propor (mempool vazio: não há bloco vazio) esperava uma transação para sempre e a rodada nunca
+  # andava; com o prazo, ele vota nulo como os demais e o proponente da rodada seguinte tenta. Se ele propõe
+  # a tempo, o prazo vence depois e é ignorado (o passo já não é `:propose`).
   defp start_round(e, r) do
     e = %{e | round: r, step: :propose}
+    e = emit(e, {:schedule_timeout, :propose, r})
 
     if proposer(e, r) == e.pub do
       case e.valid do
@@ -157,7 +162,7 @@ defmodule BrdcConsensus.Engine do
         nil -> emit(e, {:need_block, r})
       end
     else
-      emit(e, {:schedule_timeout, :propose, r})
+      e
     end
   end
 

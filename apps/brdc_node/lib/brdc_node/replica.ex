@@ -23,7 +23,7 @@ defmodule BrdcNode.Replica do
   use GenServer
   alias BrdcConsensus.{Engine, Proposal}
   alias BrdcCrypto.{Address, Ed25519}
-  alias BrdcLedger.Block
+  alias BrdcLedger.{Block, Tx}
   alias BrdcNode.{ConsensusWal, Node, Peers}
   alias BrdcP2p.Guard
   require Logger
@@ -163,7 +163,7 @@ defmodule BrdcNode.Replica do
 
   def handle_info({:peer_up, pub}, s) do
     Peers.send_to(s.peers, pub, {:status, s.height, s.last_hash})
-    {:noreply, catch_up_peer(s, pub)}
+    {:noreply, s |> catch_up_peer(pub) |> regossip_pending(pub)}
   end
 
   def handle_info({:peer_down, pub}, s),
@@ -201,6 +201,20 @@ defmodule BrdcNode.Replica do
     GenServer.stop(s.guard)
   catch
     :exit, _ -> :ok
+  end
+
+  # A fofoca de uma transação sai UMA vez, para quem está conectado naquele instante. Se um par não estava
+  # (conexão ainda subindo, queda, partição), ele nunca a receberia, e um proponente sem a transação segura a
+  # rodada. Por isso, a quem (re)conecta a réplica reenvia as pendentes (como o mempool do Tendermint); quem já
+  # tem responde `:duplicate` e nada se repete. Limitado às mais antigas, para não encher o canal.
+  @regossip_max 256
+
+  defp regossip_pending(s, pub) do
+    for m <- Node.explorer_mempool(s.node, @regossip_max) do
+      Peers.send_to(s.peers, pub, {:tx, Tx.encode(m.tx)})
+    end
+
+    s
   end
 
   # o motor não retransmite: a quem (re)conecta no meio de uma altura, a réplica reenvia o que sabe dela
