@@ -197,6 +197,9 @@ defmodule BrdcNode.Node do
       seed: seed,
       proposer: Address.hash(Ed25519.public_key(seed)),
       mempool: [],
+      # ids do mempool, para a checagem de duplicata em O(1) (antes: refazer o hash de TODAS as pendentes a cada envio,
+      # 0,5 ms com o mempool vazio e 15 ms com 7.500 pendentes)
+      mempool_ids: MapSet.new(),
       blocks: %{},
       proposals: Proposals.new(),
       interval: Keyword.get(opts, :block_interval_ms, 1_000),
@@ -401,12 +404,19 @@ defmodule BrdcNode.Node do
 
   def handle_call({:submit, bin}, _from, s) do
     with {:ok, tx} <- Tx.decode(bin),
+         id = Tx.id(tx),
          :ok <- check(length(s.mempool) < @max_mempool, :mempool_full),
-         :ok <- check(not Enum.any?(s.mempool, &(Tx.id(&1) == Tx.id(tx))), :duplicate),
+         :ok <- check(not MapSet.member?(s.mempool_ids, id), :duplicate),
          {:ok, pending, _fee} <- Executor.apply_tx(at_next_block(s), tx) do
-      s = %{s | mempool: s.mempool ++ [tx], pending_state: pending}
+      s = %{
+        s
+        | mempool: s.mempool ++ [tx],
+          mempool_ids: MapSet.put(s.mempool_ids, id),
+          pending_state: pending
+      }
+
       if s.tx_hook, do: send(s.tx_hook, {:brdc_tx, bin})
-      {:reply, {:ok, Tx.id(tx)}, arm(s)}
+      {:reply, {:ok, id}, arm(s)}
     else
       {:error, _} = err -> {:reply, err, s}
     end
@@ -518,7 +528,7 @@ defmodule BrdcNode.Node do
 
       {:error, {:invalid_tx, id, _reason}} ->
         # não deveria acontecer (cada tx foi validada ao entrar); descarta a ofensora e tenta de novo
-        s = %{s | mempool: Enum.reject(s.mempool, &(Tx.id(&1) == id))}
+        s = set_mempool(s, Enum.reject(s.mempool, &(Tx.id(&1) == id)))
         s = %{s | pending_state: replay(s.state, s.mempool)}
         produce_block(s)
 
@@ -533,7 +543,7 @@ defmodule BrdcNode.Node do
     case persist_block(s, block, cert) do
       :ok ->
         {kept, pending} = prune_mempool(new_state, rest)
-        s = %{s | state: new_state, mempool: kept, blocks: keep(s.blocks, block)}
+        s = set_mempool(%{s | state: new_state, blocks: keep(s.blocks, block)}, kept)
 
         s = %{
           s
@@ -552,6 +562,10 @@ defmodule BrdcNode.Node do
         {:nothing, s}
     end
   end
+
+  # troca o mempool inteiro (depois de um bloco) e refaz o conjunto de ids junto
+  defp set_mempool(s, mempool),
+    do: %{s | mempool: mempool, mempool_ids: MapSet.new(mempool, &Tx.id/1)}
 
   # as pendentes que ainda valem sobre o novo estado (as que ficaram inválidas, por exemplo por nonce já usado,
   # saem), mais o estado "com as pendentes"
